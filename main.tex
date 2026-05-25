@@ -41,6 +41,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 \documentclass[modern,hyperref,watermark,histinit,noindex,plain,newlogo]{ntua-thesis}
+% \usepackage[greek,english]{babel}
+% \usepackage[LGR,T1]{fontenc}
+% \usepackage{alphabeta}
+\usepackage{bm}
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -286,12 +290,16 @@
 
     
 % Εισαγωγή
+    \include{body_matter/intoGreek}
 	\include{body_matter/intro}
 % Μέρη/Κεφάλαια
 
-	\include{body_matter/chap2}
+	\include{body_matter/chap3}
+    \include{body_matter/chap4}
+    \include{body_matter/chap5}
+    \include{body_matter/chap6}
+    \include{body_matter/chap7}
     \part{Epilogue}
-	\include{body_matter/chap9}
 % Παραρτήματα
 	%\appendices
 % Βιβλιογραφία - Αναφορές
