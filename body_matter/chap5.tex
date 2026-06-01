@@ -149,11 +149,10 @@ the representation space—rather than aligning individual activations.
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.88\linewidth]{figures/bcg/KD-M.png}
-    \caption{Schematic comparison of response-based and intermediate representation distillation.
-             In response-based distillation (left), only the final output of the teacher guides the
+    \caption{Schematic view of response-based and intermediate representation distillation.
+             In response-based distillation, only the final output of the teacher guides the
              student. In feature-based distillation (right), intermediate activation maps at selected
-             layers are additionally aligned via a regression loss. A learnable projector $r_\phi$ is
-             employed when the teacher and student feature dimensions are incompatible.}
+             layers are additionally aligned via a regression loss. Both approaches are complementary to each other and can be used concurrently.}
     \label{fig:kd_paradigms}
 \end{figure}
 
@@ -171,94 +170,3 @@ The combined training objective integrates both paradigms,
 
 \noindent where $\lambda_1, \lambda_2 \geq 0$ are weighting hyperparameters balancing task performance,
 output matching, and representational alignment.
-
-% ─────────────────────────────────────────────────────────────────────────────
-\section{Diffusion Model Distillation}
-\label{sec:kd_diffusion}
-% ─────────────────────────────────────────────────────────────────────────────
-
-The application of knowledge distillation to diffusion models is motivated primarily by the high
-computational cost of iterative sampling.
-Standard Denoising Diffusion Probabilistic Models (DDPMs) \cite{ho2020denoising} require on the order
-of $T \sim 1000$ sequential network function evaluations (NFEs) to generate a single sample, as the
-reverse process progressively denoises a Gaussian variable $\mathbf{x}_T \sim \mathcal{N}(\mathbf{0},
-\mathbf{I})$ through a learned Markov chain.
-While accelerated samplers such as DDIM \cite{song2021denoising} and DPM-Solver \cite{lu2022dpm} reduce
-the required NFEs to tens or dozens by exploiting deterministic or higher-order ODE integration,
-further reduction to a handful of steps—or ideally a single step—without material quality degradation
-requires a fundamentally different approach: distillation of the multi-step sampling trajectory into a
-student that directly learns to approximate the full trajectory mapping.
-
-\textbf{Progressive Distillation.}
-Salimans and Ho \cite{salimans2022progressive} introduced Progressive Distillation (PD) as a response-
-based distillation scheme applied iteratively to the diffusion sampling trajectory.
-Given a teacher that executes $N$ denoising steps, the student is trained to match the teacher's
-\emph{two-step} output in a \emph{single} step, effectively halving the number of required NFEs.
-This procedure is applied repeatedly: the trained student is promoted to the teacher role, and a new
-student is distilled with another 2$\times$ reduction, yielding a sequence of models requiring
-$N, N/2, N/4, \ldots$ steps respectively.
-The student's denoising network $\epsilon_\theta$ is trained under
-
-\begin{equation}
-    \mathcal{L}_{\mathrm{PD}} = \mathbb{E}_{t, \mathbf{x}_0, \boldsymbol{\epsilon}}\!\left[\omega(t) \left\| \hat{\mathbf{x}}_0^{\mathcal{T}}(\mathbf{x}_t) - \hat{\mathbf{x}}_0^{\mathcal{S}}(\mathbf{x}_t) \right\|_2^2\right],
-    \label{eq:progressive_distillation}
-\end{equation}
-
-\noindent where $\hat{\mathbf{x}}_0^{\mathcal{T}}(\mathbf{x}_t)$ is the teacher's two-step prediction
-of the clean image from the noisy input $\mathbf{x}_t$, $\hat{\mathbf{x}}_0^{\mathcal{S}}(\mathbf{x}_t)$
-is the student's single-step prediction, and $\omega(t)$ is a time-step-dependent weighting function.
-Progressive Distillation has demonstrated that image quality competitive with the teacher can be achieved
-with as few as 4 NFEs, representing an over two-orders-of-magnitude reduction relative to the original
-DDPM schedule.
-
-\textbf{Consistency Distillation and Consistency Models.}
-Song et al.\ \cite{song2023consistency} proposed Consistency Models, which are grounded in the
-observation that all points along a deterministic probability flow ODE trajectory, conditioned on the same
-final sample $\mathbf{x}_0$, must be mapped to the same clean image by the learned consistency function
-$f_\theta(\mathbf{x}_t, t) \approx \mathbf{x}_0$.
-Consistency Distillation (CD) trains the student by enforcing \emph{self-consistency} of adjacent
-trajectory points: for two time steps $t > s$ connected by one step of the numerical ODE solver,
-
-\begin{equation}
-    \mathcal{L}_{\mathrm{CD}}(\theta, \theta^{-}) = \mathbb{E}_{t, \mathbf{x}_0}\!\left[\, d\!\left(f_\theta(\mathbf{x}_t,\, t),\; f_{\theta^{-}}(\hat{\mathbf{x}}_s,\, s)\right)\right],
-    \label{eq:consistency_distillation}
-\end{equation}
-
-\noindent where $\hat{\mathbf{x}}_s$ is the one-step numerical estimate of $\mathbf{x}_s$ obtained from
-$\mathbf{x}_t$ via a pre-trained diffusion teacher, $\theta^{-}$ are exponential moving average (EMA)
-parameters used as the target network to stabilise training, and $d(\cdot, \cdot)$ is a
-perceptual or $\ell_2$ distance metric.
-Importantly, Consistency Models can also be trained in a teacher-free regime—Consistency Training
-(CT)—by bootstrapping the target from the model's own EMA parameters, thus circumventing the need for a
-pre-trained diffusion teacher altogether.
-
-\textbf{Latent Consistency Models.}
-Luo et al.\ \cite{luo2023lcm} extended the consistency distillation framework to the latent space of
-pre-trained latent diffusion models (LDMs) \cite{rombach2022latent}, yielding Latent Consistency Models
-(LCMs).
-By operating in the compressed latent space of a variational autoencoder rather than in pixel space,
-LCMs inherit both the high fidelity of LDMs and the inference efficiency of consistency distillation,
-achieving competitive image quality with as few as 2–4 denoising steps on large-scale text-to-image
-benchmarks.
-
-The distillation methods described above share a common structural blueprint: a pre-trained diffusion
-model serves as the teacher, providing trajectory or output supervision; a student of equal or smaller
-capacity is trained to replicate this supervision in fewer function evaluations; and the quality of the
-resulting student is evaluated via established metrics such as the Fréchet Inception Distance (FID)
-\cite{heusel2017gans} and CLIP score \cite{radford2021learning}.
-The specific choice of distillation paradigm—response-based trajectory matching, consistency
-enforcement, or adversarial refinement via score distillation sampling \cite{poole2022dreamfusion}—
-introduces distinct trade-offs between sample quality, training stability, and generality that will be
-examined in depth in Chapter~\ref{chap:knowledge_distillation}.
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.92\linewidth]{figures/bcg/progressive_distillation.png}
-    \caption{Conceptual overview of diffusion model distillation approaches.
-             Progressive Distillation (top) iteratively halves the number of required sampling steps
-             by matching two-step teacher outputs with single-step student predictions.
-             Consistency Distillation (bottom) enforces self-consistency of all trajectory points
-             mapping to the same clean sample $\mathbf{x}_0$, enabling one- or few-step generation.}
-    \label{fig:diffusion_distillation_overview}
-\end{figure}
-\end{figure}

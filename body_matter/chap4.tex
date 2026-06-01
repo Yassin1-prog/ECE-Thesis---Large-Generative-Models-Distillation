@@ -3,8 +3,6 @@
 \label{chap:architectures}
 % ============================================================
 
-The architectural substrate of a generative model is not merely an implementation detail; it determines the inductive biases brought to bear on the data distribution, the computational complexity of training and inference, and ultimately the fidelity and diversity of the generated outputs. The rapid progress of image generation over the past decade is inseparable from a corresponding evolution in backbone architectures — from the early adoption of convolutional neural networks (CNNs) in adversarial and variational frameworks, through the emergence of U-shaped encoder-decoder networks as the workhorse of score-based and diffusion models, to the more recent integration of the self-attention mechanism and its descendant, the Vision Transformer. This chapter surveys these architectural developments with emphasis on the components most directly relevant to diffusion-based image synthesis and the knowledge distillation paradigms discussed in Chapter~\ref{chap:knowledge_distillation}.
-
 % ============================================================
 \section{Convolutional Neural Networks}
 \label{sec:cnns}
@@ -44,11 +42,9 @@ The U-Net was adopted as the denoising backbone in the seminal Denoising Diffusi
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.85\linewidth]{figures/bcg/unetdiffusion.png}
-    \caption{Schematic of a U-Net denoising backbone as employed in diffusion models. Encoder blocks (left) progressively reduce spatial resolution while expanding the channel dimension; decoder blocks (right) reverse this process. Skip connections (horizontal arrows) concatenate encoder features into the corresponding decoder stage. The timestep embedding $\tau(t)$, derived from a sinusoidal encoding, is injected via adaptive normalization at each resolution level.}
+    \caption{Schematic of a U-Net denoising backbone as employed in diffusion models. Encoder blocks (left) progressively reduce spatial resolution while expanding the channel dimension; decoder blocks (right) reverse this process. Skip connections (horizontal arrows) concatenate encoder features into the corresponding decoder stage.}
     \label{fig:unet_diffusion}
 \end{figure}
-
-The specific instantiation of the U-Net used in \cite{dhariwal2021diffusion} — which established a new state of the art for class-conditional image synthesis and whose architecture underpins much of the subsequent work on distillation — departs from the original segmentation-oriented design in several important respects. Each resolution level consists of multiple residual blocks \cite{he2016deep} rather than single convolutional layers, providing increased representational capacity at each scale without altering the spatial resolution. Self-attention layers (discussed in Section~\ref{sec:attention}) are interleaved with the convolutional residual blocks, initially only at the lowest-resolution levels where the global receptive field of attention is computationally tractable, but extending to higher resolutions in the largest model variants. Timestep conditioning is implemented by computing a sinusoidal positional embedding of $t$, projecting it through a small feed-forward network, and using the result to modulate the affine parameters of Group Normalization layers via Adaptive Group Normalization. This architecture served as the direct predecessor to the latent diffusion model U-Nets \cite{rombach2022latent}, and variants of it are employed in many of the knowledge distillation frameworks surveyed in Chapter~\ref{chap:knowledge_distillation}.
 
 % ============================================================
 \section{The Attention Mechanism}
@@ -99,7 +95,7 @@ where $\mathbf{W}^Q \in \mathbb{R}^{d \times d_k}$, $\mathbf{W}^K, \mathbf{W}^V 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.80\linewidth]{figures/bcg/attention.png}
-    \caption{Illustration of (a) scaled dot-product self-attention, (b) multi-head self-attention, and (c) cross-attention. In cross-attention, queries $\mathbf{Q}$ are projected from the visual feature sequence while keys $\mathbf{K}$ and values $\mathbf{V}$ are projected from the conditioning text embedding sequence $\mathbf{C}$, enabling each spatial position to selectively aggregate information from the text tokens.}
+    \caption{Illustration of (a) scaled dot-product self-attention, (b) multi-head self-attention.}
     \label{fig:attention_mechanisms}
 \end{figure}
 
@@ -175,7 +171,7 @@ A learnable classification token $\mathbf{z}_{\text{cls}} \in \mathbb{R}^{d_{\te
 \end{equation}
 This sequence is then processed by $L$ stacked Transformer encoder blocks, each applying multi-head self-attention as described in Section~\ref{sec:transformer}, followed by a layer-normalised FFN with residual connections.
 
-Positional encoding in ViT is typically realised through \emph{learned} 1D positional embeddings $\{\mathbf{e}_i^{\text{pos}}\}_{i=0}^{n}$, one for each patch position (plus the class token). Empirical comparisons reported in \cite{dosovitskiy2020image} indicate that 1D learned embeddings perform comparably to 2D-aware positional schemes for standard image resolutions, suggesting that the Transformer is capable of inferring 2D spatial relationships from 1D position information given sufficient data. More recent work has proposed relative positional encodings \cite{shaw2018self} and rotary positional embeddings (RoPE) \cite{su2024roformer} for ViT-style models, particularly to improve generalisation to image resolutions not seen during training — a practically important property for generative applications where spatial resolution may vary.
+Positional encoding in ViT is typically realised through \emph{learned} 1D positional embeddings $\{\mathbf{e}_i^{\text{pos}}\}_{i=0}^{n}$, one for each patch position (plus the class token). Empirical comparisons reported in \cite{dosovitskiy2020image} indicate that 1D learned embeddings perform comparably to 2D-aware positional schemes for standard image resolutions, suggesting that the Transformer is capable of inferring 2D spatial relationships from 1D position information given sufficient data. More recent work has proposed relative positional encodings \cite{shaw2018self} and rotary positional embeddings (RoPE) \cite{su2024roformer} for ViT-style models, particularly to improve generalization to image resolutions not seen during training — a practically important property for generative applications where spatial resolution may vary.
 
 % ============================================================
 %  Subsection: Scalability and Inductive Bias
@@ -189,33 +185,6 @@ A defining characteristic of ViT relative to CNN-based architectures is its subs
 This interplay between inductive bias and data scale is reflected empirically in the scaling behaviour of ViT. When trained on moderately sized datasets such as ImageNet-1k (${\sim}1.2$ million images), ViT lags behind well-regularised CNNs such as ResNet and EfficientNet \cite{he2016deep, tan2019efficientnet} in classification accuracy. However, when pre-trained on substantially larger corpora — in the order of hundreds of millions or billions of images — ViT models consistently outperform CNN counterparts \cite{dosovitskiy2020image, zhai2022scaling}. This observation motivates a shift in the design philosophy for large-scale vision models: rather than engineering architectural priors, one invests in data and compute, relying on the expressivity of the attention mechanism to discover the relevant structure from data.
 
 The scalability of ViT is further underscored by the near-linear relationship between model capacity and downstream performance observed across multiple orders of magnitude in parameter count, from ViT-Small (${\sim}22$M parameters) through ViT-Base (${\sim}86$M) and ViT-Large (${\sim}307$M) to ViT-Huge (${\sim}632$M) and beyond \cite{zhai2022scaling}. This predictable scaling behaviour stands in contrast to CNN architectures, for which performance improvements tend to saturate more rapidly with increasing depth or width. Consequently, ViT has become the preferred backbone for foundation model pre-training in vision, underpinning models such as DINO \cite{caron2021emerging}, MAE \cite{he2022masked}, and CLIP \cite{radford2021learning}, all of which are directly relevant to the construction of powerful visual representations for downstream generative tasks.
-
-% ============================================================
-%  Subsection: Adapting ViT to Generative Tasks
-% ============================================================
-
-\subsection{Adapting ViT to Generative Tasks}
-\label{subsec:vit_generative}
-
-The success of ViT as a discriminative backbone has prompted extensive investigation into its utility as a backbone for generative modelling. This adaptation is non-trivial, as generative models impose architectural requirements that differ substantially from classification: they must produce spatially coherent, high-resolution outputs, and they must condition their generation on auxiliary signals such as class labels, text embeddings, or noisy latent states. Several strategies have emerged for repurposing the ViT architecture in this setting.
-
-The most direct adaptation employs ViT as the denoising network within a diffusion model framework. The Diffusion Transformer (DiT), proposed by Peebles and Xie \cite{peebles2023scalable}, replaces the U-Net backbone conventionally used in denoising diffusion probabilistic models \cite{ho2020denoising} with a pure Transformer operating on sequences of latent image patches. DiT operates in the latent space of a pre-trained variational autoencoder (VAE), accepting as input the noisy latent $\mathbf{z}_t \in \mathbb{R}^{h \times w \times c}$ at diffusion timestep $t$, which is tokenised into a sequence of $n = hw/P^2$ patch tokens. Conditioning on the diffusion timestep $t$ and an optional class label $y$ is achieved through \emph{adaptive layer normalisation} (adaLN), wherein the scale and shift parameters of each layer normalisation are predicted by a small MLP applied to the sum of the timestep embedding and the class embedding:
-\begin{equation}
-    \text{adaLN}(\mathbf{h}, t, y) = \boldsymbol{\gamma}(t, y) \odot \frac{\mathbf{h} - \mu(\mathbf{h})}{\sigma(\mathbf{h})} + \boldsymbol{\beta}(t, y),
-    \label{eq:adaln}
-\end{equation}
-where $\boldsymbol{\gamma}(t, y), \boldsymbol{\beta}(t, y) \in \mathbb{R}^{d_{\text{model}}}$ are the predicted scale and shift vectors, $\odot$ denotes element-wise multiplication, and $\mu$, $\sigma$ denote the mean and standard deviation computed over the feature dimension. This conditioning mechanism is more expressive than simple token concatenation and has been shown to be critical for the quality of conditional image synthesis.
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.85\linewidth]{figures/bcg/DIT-ADA.png}
-    \caption{Schematic of a DiT block with adaptive layer normalization (adaLN). Conditioning signals from the diffusion timestep embedding and optional class label are used to modulate the layer normalization parameters $\boldsymbol{\gamma}$ and $\boldsymbol{\beta}$, providing flexible conditional control over the denoising process \cite{peebles2023scalable}.}
-    \label{fig:dit_block}
-\end{figure}
-
-DiT exhibits the same favourable scaling properties as discriminative ViT: larger models trained for longer consistently achieve lower FID scores on class-conditional ImageNet generation, with DiT-XL/2 (trained at $256 \times 256$ resolution) surpassing all prior diffusion models including those based on U-Net backbones \cite{peebles2023scalable}. This scalability is particularly germane to the subject of the present thesis, as the Transformer backbone makes DiT an attractive target for knowledge distillation: the clean, modular structure of Transformer layers facilitates the design of intermediate feature-matching objectives, and the availability of a family of models at different scales (DiT-S, DiT-B, DiT-L, DiT-XL) provides natural student-teacher pairs that share an identical architectural template, differing only in depth and width.
-
-Beyond DiT, other generative Transformer variants have been proposed. The U-ViT architecture \cite{bao2023all} hybridises the U-Net skip-connection topology with a Transformer backbone, introducing long skip connections between shallow and deep Transformer blocks to facilitate multi-scale feature propagation — a design motivated by the observation that low-frequency spatial information is most effectively communicated through direct shortcuts rather than through the deep processing stack. More recently, Flux and related flow-matching models \cite{lipman2022flow, esser2024scaling} have adopted Transformer-based backbones with multi-modal attention streams, enabling joint processing of image and text tokens within a unified attention computation. These architectures represent the current state of the art in text-to-image synthesis and are directly relevant to the distillation methodologies examined in Chapter~\ref{chap:knowledge_distillation}.
 
 % ================================================================
 % SECTION: The Just Image Transformer (JiT)
@@ -248,30 +217,25 @@ where $\bm{\epsilon} \sim \mathcal{N}(\bm{0}, \bm{I})$ is pure Gaussian noise an
 
 This geometric insight has a direct consequence for neural network capacity. A network that must predict $\bm{\epsilon}$ is compelled to faithfully represent a full-dimensional Gaussian vector; it must retain all $D$ degrees of freedom of the noise, since any loss of information corrupts the prediction. In contrast, a network predicting $\bm{x}$ need only capture the $d$-dimensional structure of the data manifold and suppress the off-manifold noise components. Remarkably, this implies that even an \emph{under-capacity} network — one whose hidden dimension is smaller than the ambient dimension $D$ — can still perform $\bm{x}$-prediction effectively, because the information it must preserve is intrinsically low-dimensional.
 
-\cite{li2025jit} verify this claim through a controlled toy experiment. A $d$-dimensional latent variable $\hat{\bm{x}} \in \mathbb{R}^d$ is embedded into an observed space of dimension $D \gg d$ via a fixed, randomly drawn column-orthogonal projection matrix $P \in \mathbb{R}^{D \times d}$, yielding $\bm{x} = P\hat{\bm{x}}$. A five-layer ReLU multilayer perceptron (MLP) with 256 hidden units is then trained as a generative model under $\bm{x}$-, $\bm{\epsilon}$-, and $\bm{v}$-prediction, all using the flow velocity loss (detailed in Section~\ref{subsec:jit_diffusion}). For small $D$ (e.g., $D = 2$ or $D = 8$), all three prediction modes perform reasonably. However, as $D$ increases to 16 and catastrophically to $D = 512$, $\bm{\epsilon}$-prediction and $\bm{v}$-prediction degrade severely, while $\bm{x}$-prediction continues to succeed — even though the MLP is strictly under-complete relative to the ambient space. This empirical finding is consistent with the manifold-theoretic argument: only $\bm{x}$-prediction respects the intrinsic dimensionality of the data, freeing the network from having to model the full high-dimensional noise distribution.
-
-The broader context for this distinction can be traced to the prior literature on denoising autoencoders (DAEs) \cite{vincent2008extracting, vincent2010stacked}, where directly predicting clean data from corrupted observations was explicitly motivated by the manifold assumption. However, when \cite{ho2020denoising} demonstrated that $\bm{\epsilon}$-prediction dramatically outperformed $\bm{x}$-prediction within the DDPM framework, the field largely abandoned direct clean-image prediction. \cite{li2025jit} argue that this historical choice was appropriate in lower-dimensional regimes (e.g., latent spaces of dimensionality $\sim 64$–$256$ per token) where the capacity constraint is not binding, but becomes critically detrimental in the high-dimensional pixel space, where per-patch dimensionalities can reach 768 or 3072 depending on the patch size.
-
-Furthermore, popular remedies for the high-dimensionality problem — such as reweighting the training loss, shifting the noise schedule, or increasing the network width — are shown by \cite{li2025jit} to be insufficient. Reweighting adjusts which noise levels receive more gradient signal but does not alter the fundamental capacity requirement for noise prediction. Increasing the network width proportionally to the token dimension rapidly becomes computationally intractable as resolution and patch size grow. The only principled remedy, JiT argues, is to change the prediction target itself.
 
 % ----------------------------------------------------------------
-\subsection{Architecture Overview: A Self-Contained ViT}
+\subsection{Architecture Overview}
 \label{subsec:jit_architecture}
 
-The architectural design of JiT deliberately eschews the layers of specialisation that have accumulated in modern diffusion pipelines. Contemporary state-of-the-art image generators typically rely on a cascade of components: a pre-trained variational autoencoder (VAE) or vector-quantised tokeniser to project images into a compact latent space \cite{rombach2022ldm}, followed by adversarial or perceptual auxiliary losses drawn from pre-trained discriminators or classifiers \cite{goodfellow2014generative, zhang2018unreasonable}, and increasingly on self-supervised representation alignment objectives \cite{chen2024repa}. JiT eliminates all of these, operating entirely in raw pixel space with a single training objective and no external supervisory signal.
+JiT operates entirely in raw pixel space with a single training objective and no external supervisory signal.
 
 Formally, let $\bm{x} \in \mathbb{R}^{H \times W \times C}$ denote an input image of spatial dimensions $H \times W$ and $C = 3$ colour channels. JiT divides the image into non-overlapping square patches of side length $p$, yielding a sequence of $N = \frac{H}{p} \times \frac{W}{p}$ tokens, each of dimension $p^2 C$. For the canonical JiT/16 and JiT/32 configurations benchmarked on ImageNet at $256 \times 256$ and $512 \times 512$ resolutions respectively, the per-token dimensionalities are:
 \begin{equation}
     d_{\text{token}} = p^2 C = \begin{cases} 16^2 \times 3 = 768 & \text{(JiT/16 at } 256 \times 256\text{)}, \\ 32^2 \times 3 = 3072 & \text{(JiT/32 at } 512 \times 512\text{)}. \end{cases}
     \label{eq:jit_token_dim}
 \end{equation}
-These dimensionalities are comparable to or substantially larger than those encountered in standard latent diffusion pipelines, where per-token latent dimensionalities are typically 4–16 \cite{rombach2022ldm, esser2024sd3}.
+These dimensionalities are comparable to or substantially larger than those encountered in standard latent diffusion pipelines, where per-token latent dimensionalities are typically 4–16 \cite{esser2024sd3}.
 
 Each token is linearly projected into the Transformer's hidden dimension $d_{\text{model}}$ via a learned embedding matrix $W_e \in \mathbb{R}^{p^2 C \times d_{\text{model}}}$. Absolute sinusoidal positional embeddings are added, following the original ViT formulation \cite{dosovitskiy2021vit}. The sequence is then processed by $L$ standard Transformer blocks, each consisting of multi-head self-attention (MHSA) and a position-wise feed-forward network (FFN), with pre-normalisation via layer norm \cite{ba2016layer}. An output linear predictor $W_o \in \mathbb{R}^{d_{\text{model}} \times p^2 C}$ maps each output token back to a $p^2 C$-dimensional patch prediction. The complete pipeline is summarised in Figure~\ref{fig:jit_architecture}.
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.78\linewidth]{figures/bcg/JIT.png}
+    \includegraphics[width=0.78\linewidth]{figures/bcg/jit.jpg}
     \caption{The JiT architecture. A noisy image $\bm{z}_t$ is patchified into a sequence of $N$ tokens, linearly embedded, processed by $L$ standard Transformer blocks conditioned on the diffusion time $t$ and class label $c$ via adaLN-Zero, and decoded back to pixel patches via a linear predictor. The direct output of the network is the clean image prediction $\hat{\bm{x}}_\theta$.}
     \label{fig:jit_architecture}
 \end{figure}
@@ -282,8 +246,6 @@ Conditioning on the diffusion time step $t \in [0, 1]$ and, for class-conditiona
     \label{eq:adaln}
 \end{equation}
 where $\mu, \sigma$ are the layer-wise mean and standard deviation, and $\alpha, \beta, \gamma \in \mathbb{R}^{d_{\text{model}}}$ are affine parameters predicted from the joint time-class conditioning vector.
-
-A notable finding from \cite{li2025jit} concerns the relationship between the network's hidden dimension $d_{\text{model}}$ and the per-patch dimension $d_{\text{token}}$. For $\bm{\epsilon}$- or $\bm{v}$-prediction, it has been suggested that the network width must at least match the token dimension, i.e., $d_{\text{model}} \geq d_{\text{token}}$, in order to avoid catastrophic failure \cite{TODO:chen2024highdim}. For JiT's $\bm{x}$-prediction, this constraint is relaxed: a bottleneck architecture in which $d_{\text{model}} < d_{\text{token}}$ can still perform well and may even improve generalisation, echoing classical results from manifold learning \cite{roweis2000nonlinear, tenenbaum2000global}. This bottleneck behaviour is consistent with the theoretical picture: if the true output is low-dimensional, the information compression induced by an under-complete hidden representation eliminates noise rather than distorting the signal. The authors exploit this with an optional bottleneck patch embedding that projects patches into a compressed 128-dimensional representation before the standard linear embedding, further reducing computational overhead without sacrificing generation quality.
 
 The resulting architecture is intentionally minimal. It introduces no U-Net-style skip connections \cite{ronneberger2015unet}, no hierarchical multi-scale processing \cite{karras2018progressive}, no cross-attention to auxiliary conditioning sequences, and no dense convolutional layers. In this respect, JiT represents the most direct realisation of the Scalable Diffusion Transformers (DiT) \cite{peebles2023dit} philosophy: a clean, modality-agnostic ``Diffusion $+$ Transformer'' paradigm that operates on raw data tokens without domain-specific inductive biases.
 
@@ -333,6 +295,4 @@ The JiT pipeline also supports classifier-free guidance (CFG) \cite{ho2022cfg} f
 \end{equation}
 where $c$ is the class label, $\varnothing$ denotes the null conditioning, and $w > 1$ is the guidance scale. \cite{li2025jit} further employ the CFG interval technique of \cite{kynkaanniemi2024applying}, which restricts CFG to the high-noise end of the trajectory (low $t$), a modification that consistently improves generation quality.
 
-On the ImageNet benchmark at $256 \times 256$ and $512 \times 512$ resolutions, JiT achieves competitive Fréchet Inception Distance (FID) scores relative to contemporary latent diffusion models, despite operating entirely in pixel space and employing none of the auxiliary training components that such models rely upon. In configurations where the per-patch dimensionality exceeds the network's hidden dimension — the under-complete regime — $\bm{x}$-prediction maintains stable training and strong generation quality, while $\bm{\epsilon}$- and $\bm{v}$-prediction degrade catastrophically, with FID scores collapsing entirely. This empirical evidence, combined with the manifold-theoretic analysis outlined in Section~\ref{subsec:jit_manifold}, constitutes the core argument for $\bm{x}$-prediction as a principled design choice for high-dimensional generative modelling.
-
-The relevance of JiT to the broader thesis theme of knowledge distillation in diffusion models is multifaceted. As a self-contained, tokeniser-free architecture, JiT presents a particularly clean setting for studying distillation: the absence of a pre-trained VAE removes one source of representational mismatch between teacher and student, and the manifold-theoretic justification for $\bm{x}$-prediction aligns naturally with consistency-based distillation objectives \cite{song2023consistency}, which also operate directly in the data space. The implications of the prediction target choice — and its interaction with student network capacity — are thus directly relevant to the distillation strategies discussed in Chapter~\ref{chap:knowledge_distillation}.
+JiT serves as an ideal baseline for exploring this thesis’s broader focus on knowledge distillation. Because it is a self-contained, tokenizer-free architecture, it provides a highly controlled environment for distillation research. Additionally, omitting a pre-trained VAE eliminates a common source of representational mismatch between teacher and student networks. Therefore, the distillation procedures presented in Chapter~\ref{chap:knowledge_distillation} are highly applicable to the JiT architecture.

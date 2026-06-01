@@ -3,13 +3,10 @@
 
 One of the most active and important areas of current machine learning research is the study of generative models. Unlike discriminative models, which
 learn to map inputs to labels, generative models aim to learn the underlying
-probability distribution of a dataset so that novel, realistic samples may be
+probability distribution of a dataset so that novel, realistic samples can be
 synthesized. The capacity to model complex, high-dimensional distributions has
 profound implications for image synthesis, data augmentation, representation
-learning, and scientific simulation, among many other domains. This chapter
-provides a systematic survey of the principal families of deep generative models,
-tracing the historical arc from early probabilistic approaches to contemporary
-score-based and flow-based methods.
+learning, and scientific simulation, among many other domains. The main families of deep generative models are comprehensively explored in this chapter, which examines their development from early probabilistic methods to current score-based and flow-based techniques.
 
 % -------------------------------------------------------------------
 
@@ -29,14 +26,9 @@ integral probability metric such as the Wasserstein distance
 The history of statistical generative modeling predates the deep learning era,
 encompassing classical approaches such as Gaussian mixture models, restricted
 Boltzmann machines \cite{smolensky1986information}, and deep Boltzmann machines
-\cite{salakhutdinov2009deep}. However, the confluence of large-scale datasets,
-modern GPU hardware, and expressive neural network architectures precipitated
-a qualitative shift in the capability of generative systems beginning in the
-early 2010s \cite{bengio2013representation}.
+\cite{salakhutdinov2009deep}. However starting in the early 2010s, a significant change in the capabilities of generative models was brought about by the combination of large-scale datasets, advanced GPU hardware, and expressive neural network architectures. \cite{bengio2013representation}.
 
-Contemporary deep generative models can be broadly taxonomised into four
-principal families, illustrated schematically in
-Figure~\ref{fig:generative_taxonomy}:
+Four major families can be used to classify modern deep generative models while also in Figure~\ref{fig:generative_taxonomy} there is an alternative categorization:
 \begin{enumerate}
     \item \textbf{Variational Autoencoders (VAEs)} \cite{kingma2013auto,
     rezende2014stochastic}, which optimise a tractable lower bound on the
@@ -64,11 +56,7 @@ Figure~\ref{fig:generative_taxonomy}:
 Each family embodies a distinct inductive bias and optimization strategy,
 yielding characteristic trade-offs between sample quality, training stability,
 mode coverage, and inference speed. The remainder of this chapter develops
-the mathematical foundations of each paradigm in turn. This exposition
-serves a dual purpose: it situates the contribution of the present thesis
-within the broader literature, and it establishes the formal notation required
-to analyse knowledge distillation techniques applied to diffusion models
-in Chapter~\ref{chap:knowledge_distillation}.
+the mathematical foundations of each paradigm in turn. This sets up the historical foundations before we move on and introduce our methodology in Chapter~\ref{chap:framework}
 
 % -------------------------------------------------------------------
 
@@ -133,8 +121,7 @@ the expected reconstruction error \cite{larsen2016autoencoding}. Numerous
 extensions have been proposed to mitigate these shortcomings, including
 hierarchical VAEs \cite{vahdat2020nvae, child2020very} and the introduction
 of normalising flow posteriors \cite{rezende2015variational}. Nevertheless,
-as image generation benchmarks evolved, the centre of gravity in the field
-shifted towards adversarial and, ultimately, diffusion-based approaches.
+as image generation benchmarks evolved, adversarial and, ultimately, diffusion-based approaches gained more popularity,
 
 % -------------------------------------------------------------------
 
@@ -169,8 +156,7 @@ generative approach unlocks a substantially richer hypothesis class for the
 generator, yielding significantly sharper samples than the VAE under
 comparable architectural budgets.
 
-The years following the original GAN proposal witnessed a prolific expansion
-of the framework. The Deep Convolutional GAN (DCGAN) \cite{radford2015unsupervised}
+There was a rapid growth in the GAN framework in the years after its initial introduction. The Deep Convolutional GAN (DCGAN) \cite{radford2015unsupervised}
 demonstrated that architectural guidelines — such as the use of strided
 convolutions, batch normalisation, and the avoidance of pooling layers — were
 essential for stable training. Subsequent theoretical analyses revealed that
@@ -288,7 +274,7 @@ of this destruction: beginning from pure noise, the model iteratively denoises
 a latent state until a coherent sample is recovered. This section develops the
 mathematical foundations of the three principal formulations of this idea:
 Denoising Diffusion Probabilistic Models (DDPMs), score-based generative
-modelling via score matching, and the unifying perspective afforded by
+modelling via score matching, and the unifying perspective achieved through
 stochastic differential equations (SDEs).
 
 % -------------------------------------------------------------------
@@ -318,7 +304,7 @@ Gaussian noise at each step $t \in \{1, \ldots, T\}$:
 
 \noindent where $\{\beta_t\}_{t=1}^T \subset (0, 1)$ is a fixed variance
 schedule, typically chosen to be monotonically increasing. A key analytical
-convenience of this Markov structure is that the marginal $q(\mathbf{x}_t
+benefit of this Markov structure is that the marginal $q(\mathbf{x}_t
 \mid \mathbf{x}_0)$ is available in closed form. Defining
 $\alpha_t = 1 - \beta_t$ and $\bar{\alpha}_t = \prod_{s=1}^{t} \alpha_s$,
 one obtains:
@@ -440,7 +426,7 @@ $\mathbf{x}_0$, the chain:
 \end{equation}
 
 converges in distribution to $p(\mathbf{x})$ as $\eta \to 0$ and the number
-of steps tends to infinity \cite{welling2011bayesian}. The generative modelling
+of steps tends to infinity \cite{welling2011bayesian}. The generative modeling
 task then reduces to learning a neural score estimator
 $\mathbf{s}_\theta(\mathbf{x}) \approx \nabla_{\mathbf{x}} \log p(\mathbf{x})$.
 
@@ -495,8 +481,7 @@ $\{\sigma_i\}_{i=1}^L$ with $\sigma_1 > \sigma_2 > \cdots > \sigma_L \approx 0$,
 and performing annealed Langevin dynamics during inference. At large $\sigma$,
 the perturbed distribution covers the ambient space densely, enabling robust
 initialisation; at small $\sigma$, the score estimate closely tracks the
-original data distribution. This multi-scale approach anticipates the
-continuous-time generalisation developed in the following subsection.
+original data distribution.
 
 % -------------------------------------------------------------------
 
@@ -603,32 +588,21 @@ in Chapter~\ref{chap:knowledge_distillation}.
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.95\linewidth]{figures/bcg/SFE-F-B.png}
-    \caption{Illustration of the forward and reverse diffusion processes in
+    \caption{Illustration of the forward adiffusion processes in
     the SDE framework. The forward SDE (top) gradually corrupts data
     $\mathbf{x}(0) \sim p_{\text{data}}$ into noise $\mathbf{x}(T) \sim p_T$
-    over continuous time. The reverse SDE (bottom) and the probability flow
-    ODE (dashed) recover samples by integrating backwards in time, guided by
-    the learned score network $\mathbf{s}_\theta(\mathbf{x}(t), t)$.}
+    over continuous time}
     \label{fig:sde_forward_reverse}
 \end{figure}
 
 The SDE framework thus provides three practically significant contributions.
-First, it furnishes a rigorous theoretical apparatus — grounded in stochastic
-calculus — that clarifies the relationship between previously disparate model
-families. Second, it decouples the \emph{design} of the forward process
+First, it provides a rigorous theoretical framework — grounded in stochastic
+calculus — that bridges the relationship between previously distinct modeling concepts. Second, it decouples the \emph{design} of the forward process
 (the choice of SDE) from the \emph{training} of the reverse model (score
 matching), permitting principled exploration of novel noise schedules and
 process geometries. Third, and most directly relevant to the present work,
 the probability flow ODE reveals that the generative process of a diffusion
-model can be expressed as a continuous trajectory in data space, a structure
-that lends itself naturally to the application of teacher-student distillation:
-a student model can be trained to reproduce the multi-step trajectory of a
-pre-trained teacher in a single or small number of evaluations, dramatically
-reducing inference cost without retraining from scratch.
-
-
-
-
+model can be expressed as a continuous trajectory in data space.
 
 
 % =============================================================
@@ -770,11 +744,7 @@ as discussed in Chapter~\ref{chap:knowledge_distillation}.
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.85\linewidth]{figures/bcg/FM-CFM.png}
-    \caption{Illustration of conditional flow matching trajectories. Each trajectory
-    interpolates linearly between a noise sample $\mathbf{x}_0 \sim p_0$ and a data
-    sample $\mathbf{x}_1 \sim p_{\text{data}}$. The marginal flow (solid, red) is recovered
-    by averaging over all conditional flows (dashed). Straight, non-crossing trajectories
-    are characteristic of optimal-transport couplings.}
+    \caption{Conditional probability paths as linear interpolation. $p(x|t, z = z^{(i)})$ for six samples $z^{(i)}$ (each being a pair $(x_0, x_1)$)}
     \label{fig:cfm_trajectories}
 \end{figure}
 
@@ -801,8 +771,7 @@ solves the Monge--Kantorovich problem:
 \end{equation}
 
 \noindent where $\Pi(p_0, p_1)$ denotes the set of all joint distributions with
-marginals $p_0$ and $p_1$. Under mild regularity conditions (Brenier's theorem
-\cite{brenier1991polar}), $\pi^*$ is induced by a deterministic map $T^*$, i.e.\
+marginals $p_0$ and $p_1$. $\pi^*$ is induced by a deterministic map $T^*$, i.e.\
 $\pi^* = (\text{Id} \times T^*)_\# p_0$, and the optimal trajectories are straight
 lines. Lipman et al.\ \cite{lipman2022flow} refer to the CFM variant that employs the
 OT plan as \emph{OT-CFM}, and demonstrate empirically that it produces significantly
@@ -822,16 +791,6 @@ $\pi^{(k+1)} = \text{Law}(\mathbf{x}_0, \hat{\mathbf{x}}_1)$. This reflow operat
 progressively straightens trajectories, as proved in \cite{liu2022flow} through the
 monotone decrease of the expected squared trajectory curvature.
 
-A single reflow step—producing what the authors term a \emph{2-Rectified Flow}—already
-achieves near-straight trajectories suitable for single-step generation after
-distillation \cite{liu2022flow}. This connection between flow straightening and
-distillation is significant: a distilled 2-Rectified Flow is conceptually analogous to
-progressive distillation \cite{salimans2022progressive} applied to a flow-based model,
-in that both seek to compress a multi-step sampler into a model that generates
-high-quality samples in one or a small number of network evaluations. The relationship
-between these approaches is examined in greater detail in
-Chapter~\ref{chap:knowledge_distillation}.
-
 The stochastic interpolants framework of Albergo and Vanden-Eijnden
 \cite{albergo2023building} provides a unifying perspective that subsumes both flow
 matching and score-based diffusion models. In that framework, an interpolant
@@ -849,19 +808,13 @@ for the design of knowledge distillation strategies.
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.82\linewidth]{figures/bcg/RF.png}
-    \caption{Schematic of the rectified flow reflow procedure. Left: an initial
+    \caption{Schematic of the rectified flow reflow procedure. a): an initial
     1-Rectified Flow trained on independent couplings exhibits crossing trajectories.
-    Right: after a single reflow step (2-Rectified Flow), trajectories become
-    approximately straight, enabling high-quality one-step generation after
-    distillation. Adapted from \cite{liu2022flow}.}
+    b): after a single reflow step (2-Rectified Flow), trajectories become
+    approximately straight. c): 3-Rectified Flow trajectories have become completely straight.}
     \label{fig:rectified_flow}
 \end{figure}
 
 In summary, flow matching provides a simulation-free, likelihood-free training framework
 for continuous normalizing flows whose flexibility in specifying the probability path
-and source-target coupling makes it highly amenable to distillation. The optimal
-transport interpretation offers a principled criterion for minimizing inference cost,
-while the rectified flow reflow procedure provides a practical iterative algorithm
-for trajectory straightening. These properties position flow matching as both a
-competitive generative modeling paradigm in its own right and a fertile ground for
-the acceleration techniques surveyed in Chapter~\ref{chap:knowledge_distillation}.
+and source-target coupling makes it highly desirable formulation in modern generative models architecture like the "Just Image Transformer" that we will see in Chapter~\ref{chap:architectures}.

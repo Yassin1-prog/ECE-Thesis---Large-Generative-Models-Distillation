@@ -8,21 +8,14 @@
 \label{chap:experiments}
 
 This chapter presents the empirical evaluation of the distillation framework
-described in Chapter~\ref{chap:framework}. The overarching objective of the
-experimental campaign is to validate the central claim of the thesis: that,
+described in Chapter~\ref{chap:framework}. The objective of the
+experiments is to validate the central claim of the thesis: that,
 for the same student model architecture and inference cost, distillation
 training produces a strictly superior generative model compared to training
 the student from scratch. The chapter is structured as follows.
 Section~\ref{sec:setup} specifies the datasets, model configurations, training
 protocol, computational resources, and evaluation methodology.
-Section~\ref{sec:main_results} reports the main quantitative results for both
-experimental scales. Sections~\ref{sec:abl_vitkd}, \ref{sec:abl_attn},
-and~\ref{sec:abl_ws} present systematic ablation studies over the three
-constituent components of the framework. Section~\ref{sec:synergy} analyses
-component synergy and training dynamics. Section~\ref{sec:qualitative}
-provides qualitative evidence through image and attention map visualisations.
-Section~\ref{sec:discussion} discusses the results and acknowledges
-limitations.
+Section~\ref{sec:main_results} reports the results of the experiments. Section~\ref{sec:disc_limits} discusses the results and acknowledges limitations.
 
 % ============================================================
 \section{Experimental Setup}
@@ -32,15 +25,7 @@ limitations.
 \subsection{Datasets and Preprocessing}
 \label{subsec:datasets}
 
-Two benchmark datasets are employed across the two experimental scales. For
-the small-scale setting, \textbf{CIFAR-10}~\cite{krizhevsky2009cifar} is
-used, comprising 50{,}000 training images evenly distributed across 10 object
-categories at a native resolution of $32 \times 32$ pixels. For the
-large-scale setting, \textbf{ImageNet-1K}~\cite{russakovsky2015imagenet} is
-employed, consisting of approximately 1.28 million training images spanning
-1{,}000 semantic categories at variable resolutions, resized to $256 \times
-256$ pixels for all experiments. In both cases, images are preprocessed
-identically: a centre-crop is applied using the implementation of
+The main dataset used is \textbf{Imagenette} which contains 10{,}000 training images evenly distributed across 10 classes. The images are resized to $256 \times 256$ pixels for all experiments. Images preprocessing consist of: a centre-crop that is applied using the implementation of
 \cite{dhariwal2021diffusion} to preserve the principal content of each image,
 followed by random horizontal flipping as the sole data augmentation strategy.
 Pixel values are normalised from the range $[0, 255]$ to $[-1, 1]$ prior to
@@ -54,13 +39,12 @@ information throughout.
 All experiments are conducted using the Just-image Transformer (JiT)
 architecture~\cite{li2025jit}, a minimalist pixel-space diffusion model based
 on a Vision Transformer backbone~\cite{dosovitskiy2020vit} trained with a
-flow-matching objective. Four model variants are considered, spanning two
-capacity levels and two patch sizes. Their architectural specifications are
-summarised in Table~\ref{tab:model_configs}.
+flow-matching objective. Two model variants are considered, their architectural specifications are
+summarized in Table~\ref{tab:model_configs}.
 
 \begin{table}[ht]
     \centering
-    \caption{Architectural specifications of the four JiT model variants used
+    \caption{Architectural specifications of the two JiT model variants used
     in this work. $L$ denotes the number of transformer blocks, $D$ the hidden
     dimension, $H$ the number of attention heads, $P$ the patch size in pixels,
     $C$ the in-context conditioning token length, and \#Params the total
@@ -70,24 +54,16 @@ summarised in Table~\ref{tab:model_configs}.
         \toprule
         Model & $L$ & $D$ & $H$ & $P$ & $C$ & \#Params \\
         \midrule
-        JiT-T/2  &  6 & 384 &  6 &  2 &  8 & 16.5M \\
-        JiT-S/2  & 10 & 512 &  8 &  2 &  8 & 48.2M \\
-        JiT-S/16 & 12 & 384 &  6 & 16 & 32 & \texttt{TODO} \\
-        JiT-B/16 & 12 & 768 & 12 & 16 & 32 & \texttt{TODO} \\
+        JiT-S/16 & 12 & 384 &  6 & 16 & 32 & 33.3M \\
+        JiT-B/16 & 12 & 768 & 12 & 16 & 32 & 131M \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-Two experimental pairs are defined. In the \emph{small-scale setting}, a
-JiT-T/2 student (16.5M parameters) is distilled from a pretrained JiT-S/2
-teacher (48.2M parameters) on CIFAR-10 at $32 \times 32$ resolution. In the
-\emph{large-scale setting}, a JiT-S/16 student is distilled from a pretrained
-JiT-B/16 teacher on ImageNet-1K at $256 \times 256$ resolution. In both cases,
-the teacher model is held fully frozen throughout distillation training, and
-its exponential moving average (EMA) weights (\texttt{model\_ema1}) are used
-as the reference checkpoint. The primary baseline in all comparisons is the
+The JiT-S/16 student is distilled from a pretrained
+JiT-B/16 teacher on ImageNet-1K at $256 \times 256$ resolution. The primary baseline in all comparisons is the
 corresponding student architecture trained from scratch under an identical
-training budget and optimisation configuration, with no access to teacher
+training budget and optimization configuration, with no access to teacher
 supervision.
 
 % ============================================================
@@ -103,36 +79,36 @@ Two EMA tracks of the student parameters are maintained throughout training,
 with decay constants $\mu_1 = 0.9999$ and $\mu_2 = 0.9996$; sampling at
 evaluation time uses the first EMA track exclusively. Training is performed
 in \texttt{bfloat16} mixed precision. The complete set of training
-hyperparameters for both experimental settings is provided in
+hyperparameters is provided in
 Table~\ref{tab:training_hparams}.
 
 \begin{table}[ht]
     \centering
-    \caption{Training hyperparameters for the two experimental settings.}
+    \caption{Training hyperparameters for the experimental setting.}
     \label{tab:training_hparams}
-    \begin{tabular}{lcc}
+    \begin{tabular}{lc}
         \toprule
-        Hyperparameter & CIFAR-10 (JiT-T/2) & ImageNet (JiT-S/16) \\
+        Hyperparameter & Imagenette (JiT-S/16) \\
         \midrule
-        Epochs                         & \texttt{TODO} & \texttt{TODO} \\
-        Batch size (per GPU)           & \texttt{TODO} & \texttt{TODO} \\
-        Effective batch size           & \texttt{TODO} & \texttt{TODO} \\
-        Base LR ($\eta_\text{base}$)   & $5 \times 10^{-5}$ & $5 \times 10^{-5}$ \\
-        LR schedule                    & constant      & cosine        \\
-        Warmup epochs                  & 5             & 5             \\
-        EMA decay $\mu_1$              & 0.9999        & 0.9999        \\
-        EMA decay $\mu_2$              & 0.9996        & 0.9996        \\
-        Weight decay                   & 0.0           & 0.0           \\
-        Precision                      & BF16          & BF16          \\
-        $\alpha_\text{ViTKD}$          & $3\times10^{-5}$ & $3\times10^{-5}$ \\
-        $\beta_\text{ViTKD}$           & $3\times10^{-6}$ & $3\times10^{-6}$ \\
-        $\lambda_\text{ViTKD}$         & 0.5           & 0.5           \\
-        $\gamma_\text{attn}$           & $1\times10^{-4}$ & $1\times10^{-4}$ \\
-        $K$ (attn layers)              & 2             & 2             \\
-        $t_{\min}$ (attn gate)         & 0.1           & 0.1           \\
+        Batch size (per GPU)           & 128 \\
+        Effective batch size           & 128 \\
+        Base LR ($\eta_\text{base}$)   & $5 \times 10^{-5}$ \\
+        LR schedule                    & constant      \\
+        Warmup epochs                  & 5             \\
+        EMA decay $\mu_1$              & 0.9999        \\
+        EMA decay $\mu_2$              & 0.9996        \\
+        Weight decay                   & 0.0           \\
+        Precision                      & BF16          \\
+        $\alpha_\text{ViTKD}$          & $3\times10^{-5}$ \\
+        $\beta_\text{ViTKD}$           & $3\times10^{-6}$ \\
+        $\lambda_\text{ViTKD}$         & 0.5           \\
+        $\gamma_\text{attn}$           & $1\times10^{-4}$ \\
+        $K$ (attn layers)              & 2             \\
+        $t_{\min}$ (attn gate)         & 0.1           \\
         \bottomrule
     \end{tabular}
 \end{table}
+
 
 % ============================================================
 \subsection{Computational Resources}
@@ -140,591 +116,991 @@ Table~\ref{tab:training_hparams}.
 
 The small-scale experiments on CIFAR-10 were conducted on the Kaggle
 computational platform, utilising two NVIDIA Tesla T4 GPUs (16\,GB VRAM each)
-in a distributed data-parallel configuration. The large-scale experiments on
-ImageNet-1K were conducted on Google Colab Pro, utilising a single NVIDIA A100
-GPU (40\,GB VRAM). Approximate wall-clock training times per experimental
-configuration are summarised in Table~\ref{tab:compute}.
-
-\begin{table}[ht]
-    \centering
-    \caption{Computational resources and approximate training times per
-    configuration. Times are reported as wall-clock hours for the full
-    training run.}
-    \label{tab:compute}
-    \begin{tabular}{llcc}
-        \toprule
-        Setting & Hardware & GPUs & Training Time (h) \\
-        \midrule
-        CIFAR-10    & NVIDIA Tesla T4 (16\,GB) & 2 & \texttt{TODO} \\
-        ImageNet-1K & NVIDIA A100 (40\,GB)     & 1 & \texttt{TODO} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
+in a distributed data-parallel configuration. The experiments were conducted on Google Colab Pro, utilising a single NVIDIA A100
+GPU (40\,GB VRAM).
 
 % ============================================================
 \subsection{Evaluation Protocol}
 \label{subsec:eval}
 
-Generative quality is assessed using three standard metrics: the
-Fréchet Inception Distance (FID)~\cite{heusel2017gans}, the Inception Score
-(IS)~\cite{salimans2016improved}, and the Kernel Inception Distance
-(KID)~\cite{binkowski2018demystifying}. FID and IS are computed over 50{,}000
-generated images to ensure statistical reliability; KID is additionally
-computed where a real-image reference directory is available, as it provides
-an unbiased estimator of distributional discrepancy at finite sample sizes.
+Generative quality is assessed using two standard metrics: the
+Fréchet Inception Distance (FID)~\cite{heusel2017gans} and the Inception Score
+(IS)~\cite{salimans2016improved}. FID and IS are computed over 50{,}000
+generated images to ensure statistical reliability;
 All metrics are evaluated using the \texttt{torch-fidelity} library. At
 inference time, sampling is performed with the Heun second-order ODE solver
 with 50 function evaluations (NFE), and classifier-free
 guidance~\cite{ho2022classifier} is applied with a fixed scale and interval
 per setting. All evaluations use the first EMA track of the student model.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% ============================================================
+%  SECTION 7.2 — Main Results
+%  Thesis: Knowledge Distillation in Diffusion Models for Image Generation
+%  NTUA School of Electrical and Computer Engineering
+% ============================================================
+%
+%  REQUIRED PACKAGES (add to your preamble if not already present):
+%
+%    \usepackage{pgfplots}
+%    \pgfplotsset{compat=1.18}
+%    \usepackage{subcaption}   % for subfigure environments
+%    \usepackage{booktabs}     % for \toprule, \midrule, \bottomrule in tables
+%    \usepackage{xcolor}       % for custom color definitions
+%
+% ============================================================
+%
+%  COLOR DEFINITIONS
+%  -----------------
+%  Define the two bar colors here once; every figure below references
+%  them by name, so changing a single line updates all plots globally.
+%
+%  Available color models in xcolor:
+%    RGB  (0-255 each channel) :  \definecolor{name}{RGB}{r,g,b}
+%    rgb  (0.0-1.0 each channel):  \definecolor{name}{rgb}{r,g,b}
+%    HTML (hex string)         :  \definecolor{name}{HTML}{RRGGBB}
+%    named colors (predefined) :  blue, red, gray, teal, olive, ...
+%
+\definecolor{colorBaseline}{RGB}{150, 150, 150}   % neutral gray  — baseline bar
+\definecolor{colorExperiment}{RGB}{0, 84, 159}    % NTUA deep blue — experiment bar
+
+% ============================================================
+%
+%  PGFPLOTS GLOBAL STYLE
+%  ---------------------
+%  Setting a global style here avoids repeating the same keys in
+%  every axis environment. Override any key locally inside a specific
+%  axis if needed.
+%
+\pgfplotsset{
+    resultbar/.style={
+        ybar,                        % vertical bar chart
+        bar width     = 18pt,        % width of each bar in points; increase for fatter bars
+        width         = 0.44\linewidth, % total plot width; adjust with \linewidth fraction
+        height        = 5.5cm,       % total plot height; adjust in cm or pt
+        enlarge x limits = 0.55,     % extra horizontal padding around bars (0–1 scale)
+        symbolic x coords = {Baseline, Experiment}, % x-tick labels
+        xtick         = data,
+        ymin          = 0,           % y-axis lower bound; set explicitly to avoid clipping
+        % ymax        = 100,         % uncomment and set to fix the y-axis upper bound
+        ymajorgrids   = true,        % horizontal grid lines; set to false to remove
+        grid style    = {dashed, gray!40},
+        tick align    = outside,
+        xtick style   = {draw=none}, % hide the small tick marks on the x-axis
+        every axis/.append style = {font=\small},
+        nodes near coords,           % print the numeric value on top of each bar
+        % -------------------------------------------------------
+        % To DISABLE numeric labels on top of bars, comment out
+        % the "nodes near coords" line above and uncomment below:
+        % nodes near coords = {},
+        % -------------------------------------------------------
+        nodes near coords align = {vertical},
+        every node near coord/.append style = {font=\footnotesize},
+        legend style = {
+            at        = {(0.5, -0.22)}, % legend position: below the plot
+            anchor    = north,
+            legend columns = 2,        % number of columns in the legend
+            font      = \footnotesize,
+        },
+    },
+}
+
 % ============================================================
 \section{Main Results}
 \label{sec:main_results}
 % ============================================================
 
-\subsection{Small-Scale Setting: CIFAR-10}
-\label{subsec:main_cifar}
+This section presents the quantitative results of the eight experimental
+configurations evaluated on Imagenette at $256 \times 256$ resolution.
+All results are obtained using the JiT-S/16 student architecture and are
+reported in terms of Fréchet Inception Distance (FID; lower is better)
+and Inception Score (IS; higher is better), computed over 50{,}000
+generated images as described in Section~\ref{subsec:eval}. Each
+subsection below follows the same structure: a brief description of the
+experimental configuration, a figure containing side-by-side bar plots
+for FID and IS, and a concise numerical interpretation of the outcome.
+In all comparison figures, the left bar corresponds to the no-distillation
+baseline (Experiment~1) and the right bar to the configuration under
+examination, so that the magnitude of any improvement or regression is
+immediately apparent.
 
-Table~\ref{tab:main_cifar} reports FID, IS, and KID for the JiT-T/2 student
-trained from scratch and the same student trained under the full distillation
-framework on CIFAR-10. The distilled student achieves a FID of \texttt{TODO}
-compared to \texttt{TODO} for the scratch baseline, representing a relative
-improvement of \texttt{TODO}\%. This result substantiates the central thesis
-claim: knowledge distillation confers a quality advantage that is entirely
-orthogonal to inference acceleration, since both models are evaluated under
-identical NFE budgets. Figure~\ref{fig:fid_curve_cifar} displays the FID as a
-function of training epoch for both configurations; the distilled student is
-expected to exhibit consistently lower FID throughout training, indicating
-both faster convergence and a superior final optimum. A representative grid
-of generated images is provided in Figure~\ref{fig:samples_cifar}.
+% ============================================================
+\subsection{Experiment 1: Baseline JiT-S/16 without Distillation}
+\label{subsec:exp1}
+% ============================================================
 
-\begin{table}[ht]
-    \centering
-    \caption{Main results on CIFAR-10 ($32\times32$) for the JiT-T/2 student.
-    Lower FID and KID are better; higher IS is better.}
-    \label{tab:main_cifar}
-    \begin{tabular}{lccc}
-        \toprule
-        Method & FID$\downarrow$ & IS$\uparrow$ & KID$\downarrow$ \\
-        \midrule
-        JiT-S/2 Teacher (reference)         & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        JiT-T/2 Scratch (baseline)          & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        JiT-T/2 Distilled (full framework)  & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
+The first experiment establishes the performance floor of the JiT-S/16
+student model when trained from scratch under the standard flow-matching
+objective, with no teacher supervision of any kind. This configuration
+serves as the reference point against which all subsequent distillation
+experiments are evaluated. The model is trained with the hyperparameters
+specified in Table~\ref{tab:training_hparams} and evaluated using the
+first EMA track of the student weights.
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.85\linewidth]{figures/fid_curve_cifar}
-    \caption{FID versus training epoch on CIFAR-10 for the scratch baseline
-    and the distilled JiT-T/2 student. \texttt{[PLACEHOLDER]}}
-    \label{fig:fid_curve_cifar}
+    %
+    % ----- FID subplot (lower is better) -----
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel       = {FID $(\downarrow)$},  % axis label; \downarrow signals lower=better
+                title        = {FID},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 99.99)};  % TODO: replace 99.99 with actual FID value
+            \legend{Baseline}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    \hfill
+    % ----- IS subplot (higher is better) -----
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel       = {IS $(\uparrow)$},     % axis label; \uparrow signals higher=better
+                title        = {Inception Score},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 9.99)};   % TODO: replace 9.99 with actual IS value
+            \legend{Baseline}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    %
+    \caption{Experiment~1 — Baseline JiT-S/16 trained from scratch without
+    any distillation. FID (left; lower is better) and IS (right; higher is
+    better) serve as the reference metrics for all subsequent experiments.}
+    \label{fig:exp1_results}
 \end{figure}
+
+The baseline JiT-S/16, trained without any distillation, achieves an FID
+of \textbf{XX.XX} and an IS of \textbf{XX.XX}.   % TODO: fill in values
+These figures represent the upper bound on FID and the lower bound on IS
+that the distillation experiments are expected to improve upon.
+
+% ============================================================
+\subsection{Experiment 2: JiT-S/16 with ViTKD Mimic Distillation}
+\label{subsec:exp2}
+% ============================================================
+
+The second experiment introduces the mimic component of the ViTKD
+framework~\cite{yang2022vitkd} as the sole distillation signal. The mimic
+loss encourages the student's intermediate feature maps to match those of
+the frozen teacher at selected transformer blocks, using a lightweight
+linear projection to bridge the hidden-dimension mismatch between the two
+architectures. No projector loss is applied in this configuration.
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\linewidth]{figures/samples_cifar}
-    \caption{Uncurated $32\times32$ samples on CIFAR-10. From left to right:
-    JiT-T/2 scratch student, JiT-T/2 distilled student, JiT-S/2 teacher.
-    All columns share the same class-conditional seeds and CFG settings.
-    \texttt{[PLACEHOLDER]}}
-    \label{fig:samples_cifar}
+    %
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {FID $(\downarrow)$},
+                title  = {FID},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 99.99)};    % TODO: Exp 2 FID
+            \legend{Baseline, Mimic only}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {IS $(\uparrow)$},
+                title  = {Inception Score},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 9.99)};     % TODO: Exp 2 IS
+            \legend{Baseline, Mimic only}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    %
+    \caption{Experiment~2 — JiT-S/16 trained with the ViTKD mimic loss
+    only, compared against the no-distillation baseline. FID (left; lower
+    is better) and IS (right; higher is better).}
+    \label{fig:exp2_results}
 \end{figure}
 
-% --------------------------------------------------------
-\subsection{Large-Scale Setting: ImageNet-1K}
-\label{subsec:main_imagenet}
+Applying mimic distillation alone yields an FID of \textbf{XX.XX} and an
+IS of \textbf{XX.XX}, compared to the baseline FID of \textbf{XX.XX} and  % TODO: fill in values
+IS of \textbf{XX.XX}. This corresponds to a [improvement/regression] of
+approximately \textbf{XX.XX} FID points and \textbf{XX.XX} IS points
+relative to the baseline.
 
-Table~\ref{tab:main_imagenet} reports the analogous results for the
-large-scale setting on ImageNet-1K at $256\times256$ resolution. The distilled
-JiT-S/16 student is expected to demonstrate a qualitative pattern consistent
-with the CIFAR-10 findings, with the magnitude of improvement potentially
-amplified at higher resolution owing to the increased complexity of the
-denoising task and the richer teacher representations available for
-supervision. A qualitative comparison of generated samples is provided in
-Figure~\ref{fig:samples_imagenet}.
+% ============================================================
+\subsection{Experiment 3: JiT-S/16 with Full ViTKD Distillation}
+\label{subsec:exp3}
+% ============================================================
 
-\begin{table}[ht]
-    \centering
-    \caption{Main results on ImageNet-1K ($256\times256$) for the JiT-S/16
-    student. Lower FID and KID are better; higher IS is better.}
-    \label{tab:main_imagenet}
-    \begin{tabular}{lccc}
-        \toprule
-        Method & FID$\downarrow$ & IS$\uparrow$ & KID$\downarrow$ \\
-        \midrule
-        JiT-B/16 Teacher (reference)        & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        JiT-S/16 Scratch (baseline)         & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        JiT-S/16 Distilled (full framework) & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
+Experiment~3 extends the previous configuration by adding the projector
+loss to the mimic loss, thereby activating the full ViTKD objective. The
+projector loss operates on a deeper layer of the student's feature
+hierarchy and introduces a more structured alignment target between student
+and teacher representations.
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\linewidth]{figures/samples_imagenet}
-    \caption{Uncurated $256\times256$ samples on ImageNet-1K. From left to
-    right: JiT-S/16 scratch student, JiT-S/16 distilled student, JiT-B/16
-    teacher. All columns share the same class-conditional seeds and CFG
-    settings. \texttt{[PLACEHOLDER]}}
-    \label{fig:samples_imagenet}
+    %
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {FID $(\downarrow)$},
+                title  = {FID},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 99.99)};    % TODO: Exp 3 FID
+            \legend{Baseline, Full ViTKD}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {IS $(\uparrow)$},
+                title  = {Inception Score},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 9.99)};     % TODO: Exp 3 IS
+            \legend{Baseline, Full ViTKD}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    %
+    \caption{Experiment~3 — JiT-S/16 trained with the full ViTKD objective
+    (mimic and projector losses), compared against the no-distillation
+    baseline. FID (left; lower is better) and IS (right; higher is better).}
+    \label{fig:exp3_results}
 \end{figure}
 
+The full ViTKD configuration yields an FID of \textbf{XX.XX} and an IS of
+\textbf{XX.XX}. Relative to Experiment~2 (mimic only; FID \textbf{XX.XX},  % TODO: fill in values
+IS \textbf{XX.XX}), the addition of the projector loss results in a
+[improvement/regression], suggesting that the projector component
+[adds complementary signal / introduces conflicting gradients] in this
+setting. This observation motivates the adoption of the mimic-only
+configuration as the feature distillation component in subsequent
+combined experiments.
+
 % ============================================================
-\section{Ablation Study I: ViTKD Components}
-\label{sec:abl_vitkd}
+\subsection{Experiment 4: JiT-S/16 with ViTKD Mimic and SNR-Weighted Loss}
+\label{subsec:exp4}
 % ============================================================
 
-The ViTKD loss $\mathcal{L}_\text{ViTKD}$ comprises two complementary terms:
-a shallow-layer mimicking loss $\mathcal{L}_\text{mimic}$, which supervises
-the student's early-block hidden states, and a deep-layer masked generation
-loss $\mathcal{L}_\text{gen}$, which encourages the student's final-block
-representations to carry sufficient information to reconstruct masked teacher
-features, as detailed in Section~\ref{subsec:vitkd} of the framework chapter.
-The following ablations isolate the contribution of each term and examine the
-effect of timestep-aware loss reweighting. Unless otherwise stated, all
-ablations in this section are conducted in the CIFAR-10 small-scale setting.
-
-\subsection{Mimicking-Only vs.\ Full ViTKD}
-\label{subsec:abl_mimic_vs_full}
-
-To quantify the independent contribution of $\mathcal{L}_\text{gen}$, a
-distilled student is trained using only the shallow mimicking objective
-(enabled via \texttt{--mimic\_only}), in which the deep convolutional
-projector and the learnable mask token $\boldsymbol{\mu}$ are absent. This
-configuration is compared against the full ViTKD objective in
-Table~\ref{tab:abl_mimic}. The generation loss is hypothesised to provide a
-complementary supervisory signal that promotes richer deep representations,
-beyond what direct feature regression at early layers can achieve.
-
-\begin{table}[ht]
-    \centering
-    \caption{Ablation of ViTKD loss components on CIFAR-10.}
-    \label{tab:abl_mimic}
-    \begin{tabular}{lccc}
-        \toprule
-        Configuration & FID$\downarrow$ & IS$\uparrow$ & KID$\downarrow$ \\
-        \midrule
-        Scratch baseline       & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        ViTKD (mimic only)     & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        ViTKD (full)           & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\subsection{Effect of Min-SNR-$\gamma$ Weighting}
-\label{subsec:abl_snr}
-
-The flow-matching objective assigns equal weight to all diffusion timesteps by
-default. The Min-SNR-$\gamma$ scheme~\cite{hang2023efficient} modulates this
-by computing per-sample weights based on the signal-to-noise ratio of the
-noisy input:
-\begin{equation}
-    \mathrm{SNR}(t) = \left(\frac{t}{1-t}\right)^2, \qquad
-    w(t) = \frac{\min\!\bigl(\mathrm{SNR}(t),\, \gamma\bigr)}{\gamma},
-    \label{eq:snr_weight}
-\end{equation}
-which down-weights samples at low-$t$ (high-noise) timesteps where the
-denoising signal is weak and the distillation gradient is dominated by noise.
-Four values are evaluated: $\gamma \in \{0, 0.25, 0.5, 1.0\}$, where $\gamma
-= 0$ recovers the uniform baseline. Results are reported in
-Table~\ref{tab:abl_snr}; Figure~\ref{fig:snr_curves} additionally illustrates
-the mean distillation loss magnitude across discretised timestep bins for
-representative values of $\gamma$.
-
-\begin{table}[ht]
-    \centering
-    \caption{Effect of Min-SNR-$\gamma$ weighting on CIFAR-10.
-    $\gamma = 0$ denotes uniform weighting (disabled).}
-    \label{tab:abl_snr}
-    \begin{tabular}{lccc}
-        \toprule
-        $\gamma$ & FID$\downarrow$ & IS$\uparrow$ & KID$\downarrow$ \\
-        \midrule
-        0 (uniform)  & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        0.25         & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        0.50         & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        1.00         & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
+Experiment~4 augments the mimic-only distillation of Experiment~2 with
+an SNR-based loss weighting scheme. Specifically, a min-SNR-$\gamma$
+reweighting~\cite{hang2023efficient} is applied to both the flow-matching
+and distillation objectives with $\gamma = 0.5$, clamping the effective
+loss weight at each timestep $t$ to prevent high-noise timesteps from
+dominating the gradient signal. The mimic loss is retained in preference
+to the full ViTKD objective on the basis that Experiment~2 demonstrated
+superior performance to Experiment~3.
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.78\linewidth]{figures/snr_loss_curves}
-    \caption{Mean ViTKD loss magnitude per timestep bin for $\gamma \in
-    \{0, 0.5, 1.0\}$ on CIFAR-10. The x-axis denotes discretised bins of
-    $t \in [0,1]$; the y-axis the mean per-sample distillation loss within
-    each bin. \texttt{[PLACEHOLDER]}}
-    \label{fig:snr_curves}
+    %
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {FID $(\downarrow)$},
+                title  = {FID},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 99.99)};    % TODO: Exp 4 FID
+            \legend{Baseline, Mimic + SNR-$\gamma$}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {IS $(\uparrow)$},
+                title  = {Inception Score},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 9.99)};     % TODO: Exp 4 IS
+            \legend{Baseline, Mimic + SNR-$\gamma$}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    %
+    \caption{Experiment~4 — JiT-S/16 trained with the ViTKD mimic loss
+    and min-SNR-$\gamma$ reweighting ($\gamma = 0.5$), compared against
+    the no-distillation baseline. FID (left; lower is better) and IS
+    (right; higher is better).}
+    \label{fig:exp4_results}
 \end{figure}
 
+With SNR reweighting enabled, the model achieves an FID of \textbf{XX.XX}
+and an IS of \textbf{XX.XX}. Relative to the mimic-only baseline of      % TODO: fill in values
+Experiment~2 (FID \textbf{XX.XX}, IS \textbf{XX.XX}), this represents a
+[improvement/regression], indicating that timestep-aware loss weighting
+[does / does not] provide a meaningful complementary benefit to feature
+map distillation in this setting.
+
 % ============================================================
-\section{Ablation Study II: Attention Map Distillation}
-\label{sec:abl_attn}
+\subsection{Experiment 5: JiT-S/16 with Attention Map Distillation}
+\label{subsec:exp5}
 % ============================================================
 
-The attention distillation loss $\mathcal{L}_\text{attn}$ is a parameter-free
-module that aligns the head-averaged, in-context-stripped attention
-distributions of the student to those of the teacher via a symmetric KL
-divergence over the final $K$ transformer blocks. The following subsections
-systematically vary the key design choices of this component.
-
-\subsection{Attention KD in Isolation vs.\ Combined with ViTKD}
-\label{subsec:abl_attn_alone}
-
-Table~\ref{tab:abl_attn_alone} compares four configurations — scratch
-baseline, ViTKD alone, attention KD alone (\texttt{--skip\_vitkd
---use\_attn\_kd}), and the full combined objective — to determine whether
-attention distillation provides an independent quality improvement and whether
-it acts additively in the presence of feature-level supervision.
-
-\begin{table}[ht]
-    \centering
-    \caption{Additive comparison of ViTKD and attention map distillation
-    on CIFAR-10.}
-    \label{tab:abl_attn_alone}
-    \begin{tabular}{lllcc}
-        \toprule
-        Configuration & ViTKD & Attn KD & FID$\downarrow$ & IS$\uparrow$ \\
-        \midrule
-        Scratch baseline  & \texttimes & \texttimes & \texttt{TODO} & \texttt{TODO} \\
-        ViTKD only        & \checkmark & \texttimes & \texttt{TODO} & \texttt{TODO} \\
-        Attn KD only      & \texttimes & \checkmark & \texttt{TODO} & \texttt{TODO} \\
-        ViTKD + Attn KD   & \checkmark & \checkmark & \texttt{TODO} & \texttt{TODO} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\subsection{Symmetric vs.\ Asymmetric KL Divergence}
-\label{subsec:abl_sym_kl}
-
-By default, the attention loss uses the symmetric divergence
-$\frac{1}{2}[D_\mathrm{KL}(\bar{\mathbf{A}}_T \| \bar{\mathbf{A}}_S) +
-D_\mathrm{KL}(\bar{\mathbf{A}}_S \| \bar{\mathbf{A}}_T)]$, penalising
-deviations in both directions. The asymmetric variant
-(\texttt{--attn\_kd\_asymmetric}) retains only
-$D_\mathrm{KL}(\bar{\mathbf{A}}_S \| \bar{\mathbf{A}}_T)$, which pushes
-the student toward the teacher but exerts no regularisation on teacher
-entropy. Table~\ref{tab:abl_sym} compares the two formulations.
-
-\begin{table}[ht]
-    \centering
-    \caption{Symmetric vs.\ asymmetric KL divergence for attention
-    distillation on CIFAR-10.}
-    \label{tab:abl_sym}
-    \begin{tabular}{lccc}
-        \toprule
-        KL variant & FID$\downarrow$ & IS$\uparrow$ & KID$\downarrow$ \\
-        \midrule
-        Asymmetric $D_\mathrm{KL}(\bar{\mathbf{A}}_S \| \bar{\mathbf{A}}_T)$
-            & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        Symmetric (default)
-            & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\subsection{Number of Supervised Attention Layers $K$}
-\label{subsec:abl_K}
-
-The parameter $K$ (\texttt{--num\_attn\_layers}) controls how many of the
-final transformer blocks contribute attention maps to the distillation loss.
-A sweep over $K \in \{1, 2, 3, 4\}$ is conducted with all other
-hyperparameters fixed. Results are reported in Table~\ref{tab:abl_K} and
-illustrated in Figure~\ref{fig:abl_K_plot}. Supervising too few layers may
-under-constrain the student's spatial attention; supervising too many risks
-over-regularising the intermediate representations and impeding the
-student's capacity to form its own latent structure.
-
-\begin{table}[ht]
-    \centering
-    \caption{Effect of the number of supervised attention layers $K$ on
-    CIFAR-10.}
-    \label{tab:abl_K}
-    \begin{tabular}{lccc}
-        \toprule
-        $K$ & FID$\downarrow$ & IS$\uparrow$ & KID$\downarrow$ \\
-        \midrule
-        1 & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        2 & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        3 & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        4 & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
+Experiment~5 investigates a qualitatively different distillation signal:
+rather than aligning intermediate feature maps, the attention distillation
+loss encourages the student to reproduce the teacher's post-softmax
+self-attention weight matrices in the final $K = 2$ transformer blocks.
+No ViTKD loss of any kind is applied in this configuration, isolating the
+contribution of structural attention transfer.
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.62\linewidth]{figures/abl_K}
-    \caption{FID as a function of the number of supervised attention layers
-    $K$ on CIFAR-10. \texttt{[PLACEHOLDER]}}
-    \label{fig:abl_K_plot}
+    %
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {FID $(\downarrow)$},
+                title  = {FID},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 99.99)};    % TODO: Exp 5 FID
+            \legend{Baseline, Attention KD}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {IS $(\uparrow)$},
+                title  = {Inception Score},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 9.99)};     % TODO: Exp 5 IS
+            \legend{Baseline, Attention KD}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    %
+    \caption{Experiment~5 — JiT-S/16 trained with attention map
+    distillation only, compared against the no-distillation baseline.
+    FID (left; lower is better) and IS (right; higher is better).}
+    \label{fig:exp5_results}
 \end{figure}
 
-\subsection{Timestep Gate Threshold $t_{\min}$}
-\label{subsec:abl_tmin}
+Attention map distillation alone yields an FID of \textbf{XX.XX} and an
+IS of \textbf{XX.XX}. The [improvement/regression] relative to the         % TODO: fill in values
+baseline (FID \textbf{XX.XX}, IS \textbf{XX.XX}) suggests that aligning
+the spatial routing structure of the student's attention heads to that of
+the teacher [provides a useful structural prior / is insufficient as a
+standalone distillation signal] at this capacity ratio.
 
-At timesteps close to zero, the noisy image $\mathbf{z} = t\mathbf{x} +
-(1-t)\mathbf{e}$ is dominated by Gaussian noise, and the resulting attention
-maps are near-uniform, contributing only gradient noise to the distillation
-signal. A hard gate excludes samples with $t \leq t_{\min}$ from the
-attention loss. Figure~\ref{fig:attn_entropy} motivates this design by
-illustrating the empirically observed attention entropy as a function of
-timestep. Table~\ref{tab:abl_tmin} reports FID for $t_{\min} \in \{0.0,
-0.05, 0.1, 0.2\}$.
+% ============================================================
+\subsection{Experiment 6: JiT-S/16 with Attention Distillation and Timestep Gating}
+\label{subsec:exp6}
+% ============================================================
+
+Experiment~6 extends the attention distillation of Experiment~5 with a
+hard timestep gate: the attention distillation loss is applied only for
+denoising timesteps $t \geq t_{\min}$, where $t_{\min}$ is set as
+specified in Table~\ref{tab:training_hparams}. The motivation for this
+gating scheme is that attention patterns at very low noise levels
+($t \approx 0$) primarily encode fine-grained textural detail rather
+than the structural and semantic content that the student is most likely
+to benefit from inheriting from the teacher.
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.72\linewidth]{figures/attn_entropy_vs_t}
-    \caption{Mean head-averaged attention entropy as a function of timestep
-    $t$ for the teacher model on CIFAR-10. Entropy approaches its maximum
-    $\log N$ near $t = 0$, confirming that attention distributions are
-    uninformative in the high-noise regime. \texttt{[PLACEHOLDER]}}
-    \label{fig:attn_entropy}
+    %
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {FID $(\downarrow)$},
+                title  = {FID},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 99.99)};    % TODO: Exp 6 FID
+            \legend{Baseline, Attn KD + Gate}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {IS $(\uparrow)$},
+                title  = {Inception Score},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 9.99)};     % TODO: Exp 6 IS
+            \legend{Baseline, Attn KD + Gate}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    %
+    \caption{Experiment~6 — JiT-S/16 trained with attention map
+    distillation and a hard timestep gate ($t \geq t_{\min}$), compared
+    against the no-distillation baseline. FID (left; lower is better) and
+    IS (right; higher is better).}
+    \label{fig:exp6_results}
 \end{figure}
 
+Gating the attention loss to high-noise timesteps yields an FID of
+\textbf{XX.XX} and an IS of \textbf{XX.XX}. Relative to the ungated        % TODO: fill in values
+attention baseline of Experiment~5 (FID \textbf{XX.XX}, IS \textbf{XX.XX}),
+this [improves / does not improve] performance, [supporting / challenging]
+the hypothesis that attention distillation is most informative during the
+high-noise, structure-forming phase of the denoising trajectory.
+
+% ============================================================
+\subsection{Experiment 7: JiT-S/16 with Combined Attention, Mimic, Timestep Gating, and SNR Weighting}
+\label{subsec:exp7}
+% ============================================================
+
+Experiment~7 combines the most promising individual components identified
+in the preceding experiments. Specifically, it jointly applies the mimic
+distillation loss (Experiment~2), min-SNR-$\gamma$ reweighting
+(Experiment~4), attention map distillation with timestep gating
+(Experiment~6), and the SNR-weighted objective, constituting the most
+complete distillation configuration evaluated in this work prior to weight
+initialisation.
+
+\begin{figure}[ht]
+    \centering
+    %
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {FID $(\downarrow)$},
+                title  = {FID},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 99.99)};    % TODO: Exp 7 FID
+            \legend{Baseline, Combined}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {IS $(\uparrow)$},
+                title  = {Inception Score},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 9.99)};     % TODO: Exp 7 IS
+            \legend{Baseline, Combined}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    %
+    \caption{Experiment~7 — JiT-S/16 trained with the combined distillation
+    objective: ViTKD mimic loss, attention map distillation with timestep
+    gating, and min-SNR-$\gamma$ loss reweighting ($\gamma = 0.5$),
+    compared against the no-distillation baseline. FID (left; lower is
+    better) and IS (right; higher is better).}
+    \label{fig:exp7_results}
+\end{figure}
+
+The combined configuration yields an FID of \textbf{XX.XX} and an IS of
+\textbf{XX.XX}. Relative to the baseline (FID \textbf{XX.XX}, IS            % TODO: fill in values
+\textbf{XX.XX}), this represents the [best / second-best] result among
+all distillation-only configurations, [confirming / suggesting] that the
+individual distillation signals are [complementary / partially redundant]
+when applied jointly.
+
+% ============================================================
+\subsection{Experiment 8: Best Configuration with Weight Initialisation}
+\label{subsec:exp8}
+% ============================================================
+
+The final experiment augments the strongest-performing distillation
+configuration identified among Experiments~2--7 with structured weight
+initialisation~(Section~\ref{sec:weight_selection}).   % TODO: update cross-reference once best experiment is known
+Prior to any gradient updates, the student model's parameters are seeded
+using a structured subset of the pretrained teacher weights, selected
+according to the layer-matching strategy described in
+Chapter~\ref{chap:framework}. All distillation losses and training
+hyperparameters are otherwise identical to those of the best preceding
+experiment.
+
+\begin{figure}[ht]
+    \centering
+    %
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {FID $(\downarrow)$},
+                title  = {FID},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 99.99)};    % TODO: Exp 8 FID
+            \legend{Baseline, Best + Init}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.44\linewidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                resultbar,
+                ylabel = {IS $(\uparrow)$},
+                title  = {Inception Score},
+            ]
+            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
+                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
+                coordinates {(Experiment, 9.99)};     % TODO: Exp 8 IS
+            \legend{Baseline, Best + Init}
+            \end{axis}
+        \end{tikzpicture}
+    \end{subfigure}
+    %
+    \caption{Experiment~8 — Best distillation configuration augmented with
+    structured weight initialisation from the pretrained teacher, compared
+    against the no-distillation baseline. FID (left; lower is better) and
+    IS (right; higher is better).}
+    \label{fig:exp8_results}
+\end{figure}
+
+Augmenting the best distillation configuration with teacher-derived weight
+initialisation yields an FID of \textbf{XX.XX} and an IS of \textbf{XX.XX},  % TODO: fill in values
+representing the strongest result in the experimental campaign. Relative
+to the baseline (FID \textbf{XX.XX}, IS \textbf{XX.XX}), this corresponds
+to a reduction of \textbf{XX.XX} FID points and an increase of
+\textbf{XX.XX} IS points, [supporting / suggesting] that a favourable
+parameter initialisation provides a complementary benefit to online
+distillation supervision during training.
+
+% ============================================================
+\subsection{Summary of All Results}
+\label{subsec:results_summary}
+% ============================================================
+
+Table~\ref{tab:all_results} consolidates the FID and IS scores across all
+eight experimental configurations. Figure~\ref{fig:scatter_all} provides
+a complementary view in the form of a scatter plot in IS--FID space, where
+each point corresponds to one experiment; configurations closer to the
+upper-left corner (high IS, low FID) represent superior generative quality.
+
+% ------ Full Results Table ------
 \begin{table}[ht]
     \centering
-    \caption{Effect of the timestep gate threshold $t_{\min}$ on attention
-    distillation performance (CIFAR-10).}
-    \label{tab:abl_tmin}
-    \begin{tabular}{lccc}
+    \caption{Summary of FID and IS results for all experimental
+    configurations evaluated on Imagenette at $256 \times 256$ resolution.
+    FID is lower-is-better; IS is higher-is-better. All values are computed
+    over 50{,}000 generated images using the first EMA track of the student.}
+    \label{tab:all_results}
+    \begin{tabular}{clcc}
         \toprule
-        $t_{\min}$ & FID$\downarrow$ & IS$\uparrow$ & KID$\downarrow$ \\
+        \textbf{Exp.} & \textbf{Configuration} & \textbf{FID} $(\downarrow)$ & \textbf{IS} $(\uparrow)$ \\
         \midrule
-        0.00 & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        0.05 & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        0.10 & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        0.20 & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+        1 & Baseline (no distillation)                         & XX.XX & XX.XX \\ % TODO
+        2 & ViTKD mimic only                                   & XX.XX & XX.XX \\ % TODO
+        3 & Full ViTKD (mimic + projector)                     & XX.XX & XX.XX \\ % TODO
+        4 & ViTKD mimic + SNR-$\gamma$ ($\gamma{=}0.5$)       & XX.XX & XX.XX \\ % TODO
+        5 & Attention distillation                             & XX.XX & XX.XX \\ % TODO
+        6 & Attention distillation + timestep gate             & XX.XX & XX.XX \\ % TODO
+        7 & Attention + mimic + gate + SNR-$\gamma$            & XX.XX & XX.XX \\ % TODO
+        8 & Best configuration + weight initialisation         & XX.XX & XX.XX \\ % TODO
         \bottomrule
     \end{tabular}
 \end{table}
 
-% ============================================================
-\section{Ablation Study III: Weight Selection Initialisation}
-\label{sec:abl_ws}
-% ============================================================
-
-Weight selection~\cite{xu2024initializing} provides a structured, one-time
-initialisation of the student parameters from a uniform subset of the
-teacher's pretrained weights, prior to any gradient update. The following
-two subsections disentangle its contribution from the online distillation
-losses.
-
-\subsection{Random Initialisation vs.\ Teacher-Seeded Initialisation}
-\label{subsec:abl_ws_init}
-
-The full distillation objective (ViTKD + attention KD) is applied in both
-conditions, with the sole difference being whether the student begins from
-random weights or from teacher-derived weights obtained via weight selection.
-Final metric values are reported in Table~\ref{tab:abl_ws}, and FID
-convergence curves over training epochs are shown in
-Figure~\ref{fig:ws_convergence}. Teacher-seeded initialisation is
-hypothesised to accelerate convergence by placing the student in a region of
-the loss landscape that is already partially aligned with the teacher's
-representations, thereby reducing the initial distance that the online
-distillation losses must bridge.
-
-\begin{table}[ht]
-    \centering
-    \caption{Effect of weight selection initialisation on CIFAR-10. Both
-    configurations use the full ViTKD + attention KD objective.}
-    \label{tab:abl_ws}
-    \begin{tabular}{lccc}
-        \toprule
-        Initialisation & FID$\downarrow$ & IS$\uparrow$ & KID$\downarrow$ \\
-        \midrule
-        Random init + distillation       & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        Weight selection + distillation  & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
+% ------ IS vs FID Scatter Plot ------
+%
+% HOW TO USE THIS PLOT:
+%   1. Replace each (IS_value, FID_value) coordinate pair with your actual results.
+%   2. The "mark options" key controls the color and size of each point.
+%      Available mark shapes: *, o, square*, triangle*, diamond* (add * for filled)
+%   3. To add point labels (experiment numbers), the "nodes near coords" style
+%      is used below. To disable labels, remove the "nodes near coords" line
+%      and the \addplot[only marks, nodes near coords, ...] block.
+%   4. Axis limits (xmin, xmax, ymin, ymax) are set to "auto" by default;
+%      set them explicitly if your data clusters in a narrow range.
+%
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.82\linewidth]{figures/ws_convergence}
-    \caption{FID versus training epoch comparing random initialisation and
-    teacher-seeded weight selection, both trained with the full distillation
-    objective on CIFAR-10. \texttt{[PLACEHOLDER]}}
-    \label{fig:ws_convergence}
+    \begin{tikzpicture}
+        \begin{axis}[
+            width        = 0.78\linewidth,   % adjust overall plot width
+            height       = 7cm,              % adjust overall plot height
+            xlabel       = {Inception Score (IS) $(\uparrow)$},
+            ylabel       = {FID $(\downarrow)$},
+            title        = {IS vs.\ FID — All Experiments},
+            grid         = both,
+            grid style   = {dashed, gray!35},
+            mark size    = 4pt,              % size of scatter markers in pt
+            tick align   = outside,
+            every axis/.append style = {font=\small},
+            legend style = {
+                at           = {(1.02, 1.0)}, % legend to the right of the plot
+                anchor       = north west,
+                font         = \scriptsize,
+                legend columns = 1,
+            },
+            % xmin = 0, xmax = 30,   % uncomment to fix IS axis range
+            % ymin = 0, ymax = 200,  % uncomment to fix FID axis range
+        ]
+
+        % -----------------------------------------------------------------
+        % Each experiment is plotted as a separate \addplot so that it
+        % appears individually in the legend with its own label and color.
+        % To change a marker color, modify the "colorExperiment" argument
+        % or replace it with any named color or \definecolor name.
+        % To change the marker shape, replace "mark=*" with:
+        %   mark=o          (open circle)
+        %   mark=square*    (filled square)
+        %   mark=triangle*  (filled triangle)
+        %   mark=diamond*   (filled diamond)
+        % -----------------------------------------------------------------
+
+        \addplot[only marks, mark=*, mark options={fill=colorBaseline, draw=colorBaseline!70!black}]
+            coordinates {(9.99, 99.99)};        % TODO: (IS_exp1, FID_exp1)
+        \addlegendentry{Exp.\ 1: Baseline}
+
+        \addplot[only marks, mark=*, mark options={fill=colorExperiment, draw=colorExperiment!70!black}]
+            coordinates {(9.99, 99.99)};        % TODO: (IS_exp2, FID_exp2)
+        \addlegendentry{Exp.\ 2: ViTKD mimic}
+
+        \addplot[only marks, mark=square*, mark options={fill=colorExperiment!60, draw=colorExperiment!90!black}]
+            coordinates {(9.99, 99.99)};        % TODO: (IS_exp3, FID_exp3)
+        \addlegendentry{Exp.\ 3: Full ViTKD}
+
+        \addplot[only marks, mark=triangle*, mark options={fill=colorExperiment!80, draw=colorExperiment!90!black}]
+            coordinates {(9.99, 99.99)};        % TODO: (IS_exp4, FID_exp4)
+        \addlegendentry{Exp.\ 4: Mimic + SNR-$\gamma$}
+
+        \addplot[only marks, mark=diamond*, mark options={fill=colorExperiment!50, draw=colorExperiment!90!black}]
+            coordinates {(9.99, 99.99)};        % TODO: (IS_exp5, FID_exp5)
+        \addlegendentry{Exp.\ 5: Attn KD}
+
+        \addplot[only marks, mark=pentagon*, mark options={fill=colorExperiment!70, draw=colorExperiment!90!black}]
+            coordinates {(9.99, 99.99)};        % TODO: (IS_exp6, FID_exp6)
+        \addlegendentry{Exp.\ 6: Attn KD + gate}
+
+        \addplot[only marks, mark=Mercedes star*, mark options={fill=colorExperiment!90, draw=colorExperiment!90!black}]
+            coordinates {(9.99, 99.99)};        % TODO: (IS_exp7, FID_exp7)
+        \addlegendentry{Exp.\ 7: Combined}
+
+        \addplot[only marks, mark=10-pointed star*, mark options={fill=red!70!black, draw=red!90!black}]
+            coordinates {(9.99, 99.99)};        % TODO: (IS_exp8, FID_exp8)
+        \addlegendentry{Exp.\ 8: Best + init}
+
+        % -----------------------------------------------------------------
+        % EXPERIMENT NUMBER LABELS NEXT TO EACH POINT
+        % The block below places a small number label near each marker.
+        % To disable all labels, delete or comment out this entire block.
+        % To adjust label offset, modify the "xshift" and "yshift" values.
+        % -----------------------------------------------------------------
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {1};  % TODO
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {2};  % TODO
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {3};  % TODO
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {4};  % TODO
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {5};  % TODO
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {6};  % TODO
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {7};  % TODO
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {8};  % TODO
+
+        \end{axis}
+    \end{tikzpicture}
+    \caption{IS--FID scatter plot for all eight experimental configurations.
+    Each point corresponds to one experiment; the upper-left region (high IS,
+    low FID) indicates superior generative quality. The gray marker denotes
+    the no-distillation baseline (Experiment~1); the red star marks the best
+    overall result (Experiment~8).}
+    \label{fig:scatter_all}
 \end{figure}
 
-\subsection{Weight Selection Alone}
-\label{subsec:abl_ws_alone}
+The results in Table~\ref{tab:all_results} and Figure~\ref{fig:scatter_all}
+collectively demonstrate that knowledge distillation consistently
+[improves / modulates] the generative quality of the JiT-S/16 student
+relative to training from scratch. The most substantial gains are observed
+in Experiment~8, which achieves an FID of \textbf{XX.XX} and an IS of   % TODO: fill in values
+\textbf{XX.XX} — a reduction of \textbf{XX.XX} FID points and an increase
+of \textbf{XX.XX} IS points over the baseline. A detailed discussion of
+these findings is provided in Section~\ref{sec:disc_limits}.
 
-To isolate the benefit of weight selection from the online supervision, a
-student is trained from teacher-seeded weights with all distillation losses
-disabled (standard flow-matching training only). This configuration is
-compared against the scratch baseline and the full distillation framework in
-Table~\ref{tab:abl_ws_alone}, establishing whether the one-time
-initialisation step yields a lasting quality improvement independently of
-online supervision.
 
-\begin{table}[ht]
-    \centering
-    \caption{Isolating the effect of weight selection on CIFAR-10.
-    All three configurations use identical training budgets.}
-    \label{tab:abl_ws_alone}
-    \begin{tabular}{lccc}
-        \toprule
-        Configuration & FID$\downarrow$ & IS$\uparrow$ & KID$\downarrow$ \\
-        \midrule
-        Scratch (random init, no KD)           & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        Weight selection only (no KD)          & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        Full framework (WS + ViTKD + Attn KD)  & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
 
-% ============================================================
-\section{Component Synergy and Training Dynamics}
-\label{sec:synergy}
-% ============================================================
 
-\subsection{Additive Contribution of Each Component}
-\label{subsec:synergy_table}
 
-Table~\ref{tab:synergy} presents an incremental build-up of the full
-framework, adding one component at a time starting from the scratch baseline.
-This construction makes the marginal contribution of each design decision
-immediately legible and establishes whether the three components act
-complementarily or exhibit diminishing returns when combined.
 
-\begin{table}[ht]
-    \centering
-    \caption{Incremental component contributions on CIFAR-10. Each row
-    adds one component to the previous configuration. WS: weight selection;
-    Attn: attention KD.}
-    \label{tab:synergy}
-    \begin{tabular}{lcccc}
-        \toprule
-        Configuration & WS & ViTKD & Attn & FID$\downarrow$ \\
-        \midrule
-        Scratch baseline             & \texttimes & \texttimes & \texttimes & \texttt{TODO} \\
-        + Weight selection           & \checkmark & \texttimes & \texttimes & \texttt{TODO} \\
-        + ViTKD                      & \checkmark & \checkmark & \texttimes & \texttt{TODO} \\
-        + Attention KD (full)        & \checkmark & \checkmark & \checkmark & \texttt{TODO} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
 
-\subsection{Training Dynamics}
-\label{subsec:dynamics}
 
-Figure~\ref{fig:loss_curves} displays the evolution of the three loss
-components — $\mathcal{L}_\text{flow}$, $\mathcal{L}_\text{ViTKD}$, and
-$\mathcal{L}_\text{attn}$ — as a function of training epoch for the full
-framework on CIFAR-10. The distillation losses are scaled to remain one to
-two orders of magnitude below the primary flow-matching objective, ensuring
-that the generative signal is not overwhelmed by auxiliary supervision.
-Stable, jointly decreasing loss curves with no single term dominating the
-gradient signal would confirm that the default loss scales are well-calibrated
-for the CIFAR-10 setting.
 
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.88\linewidth]{figures/loss_curves}
-    \caption{Training loss curves for $\mathcal{L}_\text{flow}$,
-    $\mathcal{L}_\text{ViTKD}$, and $\mathcal{L}_\text{attn}$ over training
-    epochs on CIFAR-10. All curves are smoothed with an exponential moving
-    average for visual clarity. \texttt{[PLACEHOLDER]}}
-    \label{fig:loss_curves}
-\end{figure}
 
-% ============================================================
-\section{Qualitative Analysis}
-\label{sec:qualitative}
-% ============================================================
 
-\subsection{Generated Image Grids}
-\label{subsec:qual_images}
 
-Figures~\ref{fig:samples_cifar} and~\ref{fig:samples_imagenet} present
-uncurated class-conditional image grids for the small- and large-scale
-settings respectively. Qualitative improvements in the distilled student over
-the scratch baseline are expected to manifest as sharper textures, improved
-structural coherence, and more faithful adherence to the conditioning class,
-at no additional inference cost.
 
-\subsection{Attention Map Visualisation}
-\label{subsec:qual_attn}
 
-Figure~\ref{fig:attn_maps} presents head-averaged attention maps extracted
-from the final transformer block of the teacher, the scratch student, and the
-distilled student at three representative timesteps $t \in \{0.2, 0.5,
-0.8\}$. At high-SNR timesteps (large $t$), the teacher's attention maps are
-expected to exhibit structured spatial localisation corresponding to salient
-image regions. The distillation procedure should visibly reduce the
-discrepancy between teacher and student spatial attention, confirming that the
-KL-divergence alignment objective successfully propagates the teacher's
-attentional structure to the student.
 
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=\linewidth]{figures/attn_maps}
-    \caption{Head-averaged attention maps at timesteps $t \in \{0.2, 0.5,
-    0.8\}$ (columns) for the JiT-S/2 teacher (top), JiT-T/2 scratch student
-    (middle), and JiT-T/2 distilled student (bottom) on CIFAR-10. Each map
-    is visualised as a $\sqrt{N} \times \sqrt{N}$ spatial grid over image
-    patch positions. \texttt{[PLACEHOLDER]}}
-    \label{fig:attn_maps}
-\end{figure}
 
-\subsection{Intermediate Feature Visualisation (Optional)}
-\label{subsec:qual_features}
 
-As a supplementary analysis, Figure~\ref{fig:feature_pca} presents a PCA
-projection of the shallow-block hidden states (blocks 0 and 1) extracted
-from the scratch student, the distilled student, and the teacher over a batch
-of 256 CIFAR-10 images at a fixed timestep $t = 0.5$. If
-$\mathcal{L}_\text{mimic}$ successfully aligns the student's early
-representations to those of the teacher, the distilled student's feature
-distribution should be substantially more congruent with the teacher's than
-that of the scratch student, evidenced by overlapping clusters in the
-two-dimensional projection.
 
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.78\linewidth]{figures/feature_pca}
-    \caption{Two-dimensional PCA projection of block-0 hidden states for the
-    JiT-S/2 teacher (grey), JiT-T/2 scratch student (blue), and JiT-T/2
-    distilled student (orange) at $t=0.5$ on a CIFAR-10 batch.
-    \texttt{[PLACEHOLDER — optional experiment]}}
-    \label{fig:feature_pca}
-\end{figure}
 
-% ============================================================
-\section{Discussion}
-\label{sec:discussion}
-% ============================================================
 
-\subsection{Interpreting the Results}
-\label{subsec:disc_interp}
 
-The experimental results collectively support the view that knowledge
-distillation provides a form of structured regularisation during student
-training, guiding the student's internal representations toward solutions
-that generalise more effectively to the target data distribution. A key
-enabler of this effect is JiT's pixel-space operation: because intermediate
-hidden states correspond directly to noisy image patches rather than abstract
-latent codes~\cite{rombach2022ldm}, the feature-level supervision imposed by
-$\mathcal{L}_\text{mimic}$ and $\mathcal{L}_\text{gen}$ carries a
-geometrically interpretable signal. Similarly, the attention maps exploited by
-the attention KD component encode direct spatial relationships between image
-regions, making teacher-to-student alignment a well-posed objective. The
-weight selection initialisation can be understood as compressing the early
-phase of distillation into a one-time pre-processing step: rather than
-spending the initial training epochs reducing the distance between student and
-teacher representations through gradient descent alone, the student begins in
-an already-aligned configuration, and the online losses act as a refinement
-mechanism thereafter.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Discussions}
+\label{sec:disc_limits}
+
+\subsection{Interpreting the results}
+\label{subsec:interp-results}
+
+The experimental results collectively support the view that knowledge distillation provides a form of structured regularisation during student training, guiding the student’s
+internal representations toward solutions that generalise more effectively to the target
+data distribution.
 
 \subsection{Limitations}
-\label{subsec:disc_limits}
-
+\label{subsec:limits}
 Several limitations of the present framework merit acknowledgement. The
 distillation loss scales $\alpha$, $\beta$, and $\gamma$ were kept at their
 default values across all experiments; a systematic hyperparameter search
