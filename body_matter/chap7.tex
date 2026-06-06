@@ -38,7 +38,7 @@ information throughout.
 
 All experiments are conducted using the Just-image Transformer (JiT)
 architecture~\cite{li2025jit}, a minimalist pixel-space diffusion model based
-on a Vision Transformer backbone~\cite{dosovitskiy2020vit} trained with a
+on a Vision Transformer backbone~\cite{dosovitskiy2020image} trained with a
 flow-matching objective. Two model variants are considered, their architectural specifications are
 summarized in Table~\ref{tab:model_configs}.
 
@@ -70,7 +70,7 @@ supervision.
 \subsection{Training Protocol and Hyperparameters}
 \label{subsec:training}
 
-All models are trained with the AdamW optimiser~\cite{loshchilov2019decoupled}
+All models are trained with the AdamW optimiser~\cite{loshchilov2017decoupled}
 with momentum coefficients $\beta_1 = 0.9$ and $\beta_2 = 0.95$ and no weight
 decay. The learning rate is set according to the linear scaling rule,
 $\eta = \eta_\text{base} \times B_\text{eff} / 256$, with a base learning

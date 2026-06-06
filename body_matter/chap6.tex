@@ -8,9 +8,9 @@
 
 The prevailing paradigm of knowledge distillation applied to diffusion models has been almost exclusively concerned with \emph{sampling acceleration}: given a fully trained teacher, a student is trained to reproduce the teacher's output in fewer denoising steps, thereby reducing the number of function evaluations (NFE) at inference time \cite{salimans2022progressive, song2023consistency, luo2023lcm}. While this line of work is practically valuable, it addresses a fundamentally different objective than the one pursued in this thesis. Sampling-acceleration methods do not alter the capacity or representational quality of the student model; a student that converges under such a scheme simply learns to approximate the teacher's multi-step trajectory in fewer steps, but it cannot surpass the teacher's generative quality ceiling at a fixed NFE. Our goal is orthogonal: we seek to \emph{improve the generative quality} of a smaller JiT model without modifying its inference-time architecture, parameter count, or computational cost. That is, for an identical deployment budget, we aim to produce a strictly higher-quality generative model by leveraging supervision from a larger, pretrained JiT teacher during training. The distillation signal is discarded at inference time; the student runs as a standalone model.
 
-This quality-boosting objective is enabled by a property specific to JiT \cite{li2025jit}: it operates directly in pixel space. Unlike latent diffusion models \cite{rombach2022ldm}, whose denoising trajectories exist in high-dimensional latent codes with no direct visual interpretation, JiT's intermediate states at every denoising timestep are actual noisy images — semantically grounded, spatially structured, and directly inspectable. This observability has a concrete consequence for distillation: the internal representations of JiT, including its multi-head self-attention maps and intermediate feature tensors, are dense, spatially coherent, and carry interpretable information about image structure at every point along the denoising trajectory. In latent-space models, by contrast, such intermediate representations encode statistics of an abstract embedding space, and their spatial correspondence to image content is indirect and architecture-dependent. The pixel-space setting thus exposes a richer and more supervisable knowledge structure, making JiT a uniquely suitable backbone for feature-level distillation.
+This quality-boosting objective is enabled by a property specific to JiT \cite{li2025jit}: it operates directly in pixel space. Unlike latent diffusion models \cite{rombach2022latent}, whose denoising trajectories exist in high-dimensional latent codes with no direct visual interpretation, JiT's intermediate states at every denoising timestep are actual noisy images — semantically grounded, spatially structured, and directly inspectable. This observability has a concrete consequence for distillation: the internal representations of JiT, including its multi-head self-attention maps and intermediate feature tensors, are dense, spatially coherent, and carry interpretable information about image structure at every point along the denoising trajectory. In latent-space models, by contrast, such intermediate representations encode statistics of an abstract embedding space, and their spatial correspondence to image content is indirect and architecture-dependent. The pixel-space setting thus exposes a richer and more supervisable knowledge structure, making JiT a uniquely suitable backbone for feature-level distillation.
 
-Concretely, this thesis investigates three complementary distillation strategies applied within a unified teacher--student framework. The teacher is a larger, pretrained JiT variant with its weights held frozen throughout training. The student is a smaller JiT variant trained from scratch — or from an informed initialisation — under the combined supervision of the standard flow-matching objective and additional distillation losses derived from the teacher's internal representations. We conduct experiments on two benchmarks at different scales of difficulty: CIFAR-10 \cite{krizhevsky2009cifar}, where the teacher--student pair is JiT-S/2 (48.2M parameters) and JiT-T/2 (16.5M parameters), respectively; and ImageNet-1K \cite{russakovsky2015imagenet}, where the pair is JiT-B/16 (131M parameters) and JiT-S/16 (33.3M parameters). Full experimental details, training protocols, and quantitative results are reported in Chapter~\ref{chap:experiments}.
+Concretely, this thesis investigates three complementary distillation strategies applied within a unified teacher--student framework. The teacher is a larger, pretrained JiT variant with its weights held frozen throughout training. The student is a smaller JiT variant trained from scratch — or from an informed initialisation — under the combined supervision of the standard flow-matching objective and additional distillation losses derived from the teacher's internal representations. We conduct experiments on ImageNet-1K \cite{russakovsky2015imagenet}, where the teacher-student pair is JiT-B/16 (131M parameters) and JiT-S/16 (33.3M parameters). Full experimental details, training protocols, and quantitative results are reported in Chapter~\ref{chap:experiments}.
 
 The framework employs three distillation strategies, with a schematic overview illustrated in Figure~\ref{fig:framework_overview}:
 \begin{itemize}
@@ -20,14 +20,6 @@ The framework employs three distillation strategies, with a schematic overview i
     
     \item \textbf{Weight selection}: Rather than acting as an online training loss, this step (Section~\ref{sec:weight_selection}) serves as an initialization strategy. It seeds the student model using a structured subset of the teacher's pretrained weights prior to any gradient updates.
 \end{itemize}
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.92\linewidth]{figures/formula/training-loop.png}
-    \caption{Overview of the proposed knowledge distillation framework. The teacher JiT model (larger variant) is frozen and processes the same noisy input as the student (smaller variant) at every training step. Three distillation signals are derived from the teacher: (i) intermediate feature maps from shallow and deep transformer blocks, used by the ViTKD loss; (ii) post-softmax self-attention weight matrices from the final $K$ blocks, used by the attention KD loss; and (iii) a structured subset of pretrained weights, used to initialise the student prior to training. The student is additionally supervised by the standard flow-matching denoising loss $\mathcal{L}_{\text{flow}}$. At inference time, only the student is used.}
-    \label{fig:framework_overview}
-\end{figure}
-
 
 % ============================================================
 \section{Feature Map Distillation via ViTKD}
@@ -88,14 +80,6 @@ loss.
     \end{tabular}
 \end{table}
 
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=\linewidth]{figures/formula/VITKD.png}
-    \caption{Detailed schematic of the ViTKD distillation pipeline applied to the JiT teacher--student pair. \textbf{Top path (mimicking):} hidden-state tensors $\mathbf{F}_i^T$ and $\mathbf{F}_i^S$ from the first two transformer blocks of teacher and student, respectively, are aligned via learned projections $\phi_i$ (plain linear or \texttt{AdaLNAlign}) and compared under an MSE loss $\mathcal{L}_{\text{mimic}}$. \textbf{Bottom path (generation):} the student's final-block features $\mathbf{H}^S$ are linearly projected to $D_T$ dimensions, a random subset of tokens is masked (shown in grey), and a convolutional projector reconstructs the masked positions from spatial context; the reconstruction error against the teacher's final features $\mathbf{H}^T$ defines $\mathcal{L}_{\text{gen}}$. The conditioning vector $\mathbf{c}$ (encoding timestep and class) feeds the \texttt{AdaLNAlign} modulation when timestep conditioning is enabled. All teacher computations are performed without gradient tracking. Dimension annotations: $D_S$ and $D_T$ denote student and teacher embedding dimensions, respectively; $N$ denotes the number of patch tokens.}
-    \label{fig:vitkd_pipeline}
-\end{figure}
-
-
 
 \subsection{Shallow-Layer Mimicking Loss}
 \label{subsec:vitkd_mimic}
@@ -126,7 +110,7 @@ The procedure operates as follows. The student's deep features $\mathbf{H}^S$ ar
     \label{eq:loss_gen}
 \end{equation}
 %
-where $\hat{\mathbf{H}}_b^S$ denotes the projector output for sample $b$, $\mathbf{m}_b \in \{0,1\}^{N \times 1}$ is the per-sample mask broadcast over the channel dimension, $\beta$ is a scalar loss weight, and the $\lambda$ factor in the denominator normalises for the varying number of masked tokens. The mask is sampled uniformly at random without replacement using a noise-based shuffling procedure \cite{he2022masked}. In practice, $\lambda = 0.5$ is used as the default masking ratio, meaning that half of the student's deep tokens are masked per step.
+where $\hat{\mathbf{H}}_b^S$ denotes the projector output for sample $b$, $\mathbf{m}_b \in \{0,1\}^{N \times 1}$ is the per-sample mask broadcast over the channel dimension, $\beta$ is a scalar loss weight, and the $\lambda$ factor in the denominator normalises for the varying number of masked tokens. The mask is sampled uniformly at random without replacement using a noise-based shuffling procedure. In practice, $\lambda = 0.5$ is used as the default masking ratio, meaning that half of the student's deep tokens are masked per step.
 
 The convolutional projector is the critical architectural element distinguishing the generation component from a second mimicking term: by requiring the model to spatially interpolate across masked positions using a $3 \times 3$ receptive field, it forces the student's projected features to encode local spatial coherence consistent with the teacher's global deep representation. This is particularly meaningful in the diffusion context, where the final-block features must ultimately support a spatially consistent velocity prediction across the entire image.
 
@@ -152,7 +136,7 @@ where $\mathcal{L}_{\text{mimic}}$ and $\mathcal{L}_{\text{gen}}$ are as defined
 \label{sec:attn_kd}
 % ============================================================
 
-A central finding of \cite{li2024attentiontransfer} challenges the conventional understanding of what pre-training accomplishes in Vision Transformers. The authors demonstrate that  \emph{attention patterns} — the learned distributions over which tokens attend to which — constitutes a fundamental carrier of transferable knowledge. Attention transfer is introduced, in which only the post-softmax attention weight matrices of a pretrained teacher ViT are used to supervise a student, while the student is free to develop its own feature representations from scratch.
+A central finding of \cite{li2024surprising} challenges the conventional understanding of what pre-training accomplishes in Vision Transformers. The authors demonstrate that  \emph{attention patterns} — the learned distributions over which tokens attend to which — constitutes a fundamental carrier of transferable knowledge. Attention transfer is introduced, in which only the post-softmax attention weight matrices of a pretrained teacher ViT are used to supervise a student, while the student is free to develop its own feature representations from scratch.
 
 This finding is particularly well-motivated in the pixel-space diffusion setting of JiT. At each denoising timestep $t$, the multi-head self-attention maps of a JiT block directly encode spatial relationships between image patch tokens: which patches attend to which others, reflecting spatial proximity, texture coherence, semantic grouping, and structural layout at the pixel level. Because JiT operates on raw pixel patches rather than abstract latent codes, these attention distributions carry a direct and interpretable correspondence to image content. A teacher model that has been trained to convergence will have developed refined attention routing — grouping semantically related patches, suppressing noisy or uninformative tokens, and resolving long-range spatial dependencies — that a smaller student model has insufficient capacity to discover independently within the same training budget. Supervising the student's attention distributions to approximate those of the teacher therefore transfers a form of relational inductive bias that cannot be conveyed by the output-level flow-matching loss alone.
 
@@ -162,7 +146,7 @@ Attention maps are extracted from the last $K$ transformer blocks of both teache
 
 \subsection*{Distillation Objective: KL Divergence}
 
-Let $\bar{\mathbf{A}}_S^{(\ell)} \in \mathbb{R}^{B \times N \times N}$ and $\bar{\mathbf{A}}_T^{(\ell)} \in \mathbb{R}^{B \times N \times N}$ denote the preprocessed, head-averaged attention maps of the student and teacher at selected layer $\ell \in \{1, \ldots, K\}$, respectively. The attention distillation loss penalises distributional discrepancy between corresponding student and teacher attention maps. Whereas the original attention transfer paper of \cite{li2024attentiontransfer} employs cross-entropy $H(\bar{\mathbf{A}}_T^{(\ell)}, \bar{\mathbf{A}}_S^{(\ell)})$ as the distillation objective, we adopt the Kullback-Leibler (KL) divergence as the primary loss function. This choice is motivated by the fact that the rows of $\bar{\mathbf{A}}$ are proper probability distributions over the $N$ token positions; KL divergence is the canonical information-theoretic measure of how much one distribution diverges from another, and unlike cross-entropy it is invariant to the entropy of the target distribution, making the loss magnitude more interpretable and stable across different noise levels $t$ where the teacher's attention entropy may vary significantly.
+Let $\bar{\mathbf{A}}_S^{(\ell)} \in \mathbb{R}^{B \times N \times N}$ and $\bar{\mathbf{A}}_T^{(\ell)} \in \mathbb{R}^{B \times N \times N}$ denote the preprocessed, head-averaged attention maps of the student and teacher at selected layer $\ell \in \{1, \ldots, K\}$, respectively. The attention distillation loss penalises distributional discrepancy between corresponding student and teacher attention maps. Whereas the original attention transfer paper of \cite{li2024surprising} employs cross-entropy $H(\bar{\mathbf{A}}_T^{(\ell)}, \bar{\mathbf{A}}_S^{(\ell)})$ as the distillation objective, we adopt the Kullback-Leibler (KL) divergence as the primary loss function. This choice is motivated by the fact that the rows of $\bar{\mathbf{A}}$ are proper probability distributions over the $N$ token positions; KL divergence is the canonical information-theoretic measure of how much one distribution diverges from another, and unlike cross-entropy it is invariant to the entropy of the target distribution, making the loss magnitude more interpretable and stable across different noise levels $t$ where the teacher's attention entropy may vary significantly.
 
 For each query token position $n \in \{1, \ldots, N\}$ and each selected layer $\ell$, the KL divergence from the student's distribution to the teacher's is:
 %
@@ -204,8 +188,10 @@ A critical consideration specific to the diffusion setting is that at very low n
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\linewidth]{figures/formula/attn-d.png}
-    \caption{Illustration of the attention map distillation procedure. From each of the last $K$ transformer blocks, the $H$ per-head attention matrices are extracted from both teacher (frozen) and student (trainable), averaged across heads, and stripped of in-context conditioning tokens to yield spatial routing distributions $\bar{\mathbf{A}}_T^{(\ell)}, \bar{\mathbf{A}}_S^{(\ell)} \in \mathbb{R}^{N \times N}$. Samples with $t \leq t_{\min}$ are excluded (greyed out). KL divergence is computed between the resulting distributions and aggregated across layers and tokens to form $\mathcal{L}_{\text{attn}}$. No learnable parameters are introduced by this component; the student's attention maps are computed by its own multi-head self-attention mechanism.}
+    \includegraphics[width=\linewidth]{figures/formula/AD.png}
+    \caption{Illustration of the attention map distillation procedure. The student computes its own attention maps, with an additional
+KL-divergence loss to distill patterns from the teacher during training. The teacher is no longer used
+during inference. H: number of heads; L: number of Transformer layers}
     \label{fig:attn_kd_pipeline}
 \end{figure}
 
@@ -227,7 +213,7 @@ The initialization procedure operates parameter-tensor by parameter-tensor. For 
 
 \subsection*{Application to JiT and Handling of Architectural Mismatches}
 
-Applying weight selection to the JiT model family requires careful handling of several architecture-specific considerations. The primary cases encountered in our experimental pairs are summarised as follows.
+Applying weight selection to the JiT model family requires careful handling of several architecture-specific considerations. The primary cases encountered in our experimental pairs are summarized as follows.
 
 \paragraph{Hidden dimension reduction.} The teacher is JiT-B/16 with hidden dimension $D_T = 768$ and the student is JiT-S/16 with $D_S = 384$. All weight matrices of the form $\mathbf{W} \in \mathbb{R}^{D_T \times D_T}$ — including query, key, value, and projection weight matrices in every attention block, as well as FFN weight matrices — are reduced to $\mathbb{R}^{D_S \times D_S}$ by uniform selection along both dimensions.
 
@@ -238,7 +224,8 @@ Applying weight selection to the JiT model family requires careful handling of s
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.85\linewidth]{figures/formula/weight-selection.png}
-    \caption{Illustration of the weight selection initialisation procedure for the JiT-S/2 $\to$ JiT-T/2 pair ($D_T = 512$, $D_S = 384$, teacher depth 10, student depth 6). \textbf{Left:} for each weight matrix, a structured subset of rows and columns is selected at uniform spacing from the teacher tensor (shown in orange), yielding a student-sized initialisation (shown in blue). \textbf{Right:} layer correspondence for the depth reduction case; the student's 6 blocks are matched to 6 of the teacher's 10 blocks at uniform stride, preserving both early and late layers.}
+    \caption{Weight selection. To initialize a smaller variant of a pretrained model, we uniformly select
+parameters from the corresponding component of the pretrained model}
     \label{fig:weight_selection}
 \end{figure}
 
@@ -248,7 +235,7 @@ Applying weight selection to the JiT model family requires careful handling of s
 \label{sec:unified_objective}
 % ============================================================
 
-The three components described in the preceding sections are integrated into a single training procedure. Weight selection provides a one-time initialization of the student's parameters from the teacher's pretrained weights before training commences. During each subsequent training step, the student is optimised under a combined loss that aggregates the base denoising objective with the two distillation losses:
+The three components described in the preceding sections can be integrated into a single training procedure. Weight selection provides a one-time initialization of the student's parameters from the teacher's pretrained weights before training starts. During each subsequent training step, the student is optimized under a combined loss that aggregates the base denoising objective with the two distillation losses:
 %
 \begin{equation}
     \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{flow}} + \mathcal{L}_{\text{ViTKD}} + \mathcal{L}_{\text{attn}},

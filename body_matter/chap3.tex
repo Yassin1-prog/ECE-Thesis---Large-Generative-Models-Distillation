@@ -25,8 +25,7 @@ integral probability metric such as the Wasserstein distance
 
 The history of statistical generative modeling predates the deep learning era,
 encompassing classical approaches such as Gaussian mixture models, restricted
-Boltzmann machines \cite{smolensky1986information}, and deep Boltzmann machines
-\cite{salakhutdinov2009deep}. However starting in the early 2010s, a significant change in the capabilities of generative models was brought about by the combination of large-scale datasets, advanced GPU hardware, and expressive neural network architectures. \cite{bengio2013representation}.
+Boltzmann machines, and deep Boltzmann machines. However starting in the early 2010s, a significant change in the capabilities of generative models was brought about by the combination of large-scale datasets, advanced GPU hardware, and expressive neural network architecture.
 
 Four major families can be used to classify modern deep generative models while also in Figure~\ref{fig:generative_taxonomy} there is an alternative categorization:
 \begin{enumerate}
@@ -108,18 +107,18 @@ First, it scales naturally to high-dimensional data through the use of deep
 convolutional architectures for both encoder and decoder. Second, the learned
 latent space is continuous and structured, facilitating smooth interpolation
 between data points — a property with direct utility in representation learning
-and data augmentation \cite{higgins2017betavae}. Third, the probabilistic
+and data augmentation. Third, the probabilistic
 formulation provides a principled mechanism for handling uncertainty.
 
 Nonetheless, VAEs are subject to well-documented limitations. The KL term in
 the ELBO encourages the posterior to collapse towards the prior when the
 decoder is sufficiently expressive, a phenomenon termed \emph{posterior
-collapse} \cite{bowman2015generating}. Furthermore, optimising the ELBO
+collapse}. Furthermore, optimising the ELBO
 under a simple Gaussian likelihood tends to produce blurry samples in
 pixel space, as the model distributes probability mass broadly to minimise
-the expected reconstruction error \cite{larsen2016autoencoding}. Numerous
+the expected reconstruction error. Numerous
 extensions have been proposed to mitigate these shortcomings, including
-hierarchical VAEs \cite{vahdat2020nvae, child2020very} and the introduction
+hierarchical VAEs and the introduction
 of normalising flow posteriors \cite{rezende2015variational}. Nevertheless,
 as image generation benchmarks evolved, adversarial and, ultimately, diffusion-based approaches gained more popularity,
 
@@ -156,14 +155,14 @@ generative approach unlocks a substantially richer hypothesis class for the
 generator, yielding significantly sharper samples than the VAE under
 comparable architectural budgets.
 
-There was a rapid growth in the GAN framework in the years after its initial introduction. The Deep Convolutional GAN (DCGAN) \cite{radford2015unsupervised}
+There was a rapid growth in the GAN framework in the years after its initial introduction. The Deep Convolutional GAN (DCGAN)
 demonstrated that architectural guidelines — such as the use of strided
 convolutions, batch normalisation, and the avoidance of pooling layers — were
 essential for stable training. Subsequent theoretical analyses revealed that
 the Jensen--Shannon divergence underlying Equation~\ref{eq:gan_objective}
 is poorly behaved when the supports of $p_{\text{data}}$ and $p_\theta$ are
 disjoint, a condition commonly encountered early in training. The Wasserstein
-GAN (WGAN) \cite{arjovsky2017wasserstein} addressed this by replacing the
+GAN (WGAN) addressed this by replacing the
 JS divergence with the earth mover's distance:
 
 \begin{equation}
@@ -176,17 +175,15 @@ JS divergence with the earth mover's distance:
 \noindent where the supremum is taken over all 1-Lipschitz functions $f$.
 This reformulation yields more meaningful gradients throughout training and
 substantially improves stability. The practical enforcement of the Lipschitz
-constraint was subsequently refined through gradient penalty regularisation
-\cite{gulrajani2017improved}.
+constraint was subsequently refined through gradient penalty regularisation.
 
 Progressive training strategies \cite{karras2018progressive} and large-scale
 normalisation techniques further expanded the resolution ceiling of GAN
-synthesis. The StyleGAN series \cite{karras2019style, karras2020analyzing,
-karras2021alias} demonstrated state-of-the-art perceptual quality on
+synthesis. The StyleGAN series demonstrated state-of-the-art perceptual quality on
 high-resolution face generation by introducing a style-based generator
 architecture that disentangles coarse and fine-grained attributes in the
 latent space. Concurrently, large-scale class-conditional models such as
-BigGAN \cite{brock2019large} pushed the Fréchet Inception Distance (FID)
+BigGAN pushed the Fréchet Inception Distance (FID)
 \cite{heusel2017gans} on ImageNet to levels previously considered
 unattainable, establishing GANs as the dominant paradigm for high-fidelity
 image synthesis through the late 2010s.
@@ -210,10 +207,10 @@ Mode collapse, wherein the generator produces samples of high perceptual
 quality but low diversity, represents a particularly acute failure mode:
 the generator may identify a small subset of the data manifold that reliably
 deceives the discriminator and exploit it exclusively, thereby failing to
-cover $p_{\text{data}}$ in its entirety \cite{srivastava2017veegan}. The
+cover $p_{\text{data}}$ in its entirety . The
 adversarial training objective provides no explicit mechanism for diversity
 enforcement, and the practical mitigations — minibatch discrimination
-\cite{salimans2016improved}, unrolled GANs \cite{metz2017unrolled} — offer
+\cite{salimans2016improved}, unrolled GANs — offer
 only partial remedies. These intrinsic limitations, combined with the
 comparatively greater training stability of likelihood-based methods, motivated
 renewed interest in alternative generative paradigms, and ultimately contributed
@@ -426,7 +423,7 @@ $\mathbf{x}_0$, the chain:
 \end{equation}
 
 converges in distribution to $p(\mathbf{x})$ as $\eta \to 0$ and the number
-of steps tends to infinity \cite{welling2011bayesian}. The generative modeling
+of steps tends to infinity. The generative modeling
 task then reduces to learning a neural score estimator
 $\mathbf{s}_\theta(\mathbf{x}) \approx \nabla_{\mathbf{x}} \log p(\mathbf{x})$.
 
@@ -577,9 +574,9 @@ computation via the \emph{instantaneous change of variables formula}
 theoretical basis for accelerated sampling: since the stochastic component
 has been eliminated, higher-order deterministic solvers can traverse the
 trajectory in far fewer function evaluations than stochastic samplers
-\cite{song2021denoising, lu2022dpmsolver}. This observation underpins a
+\cite{song2021denoising, lu2022dpm}. This observation underpins a
 broad family of inference-time acceleration methods, including DDIM
-\cite{song2021denoising} and DPM-Solver \cite{lu2022dpmsolver}, which
+\cite{song2021denoising} and DPM-Solver \cite{lu2022dpm}, which
 reduce the number of required neural function evaluations by one to two
 orders of magnitude relative to naive ancestral sampling, and constitute
 the immediate precursors to the knowledge distillation approaches examined

@@ -9,7 +9,7 @@
 The remarkable performance of modern deep neural networks is, in large part, a function of their scale.
 Empirical evidence consistently demonstrates that increases in model depth, width, and training-data volume
 yield systematic improvements across a wide range of tasks in computer vision, natural language processing,
-and generative modelling \cite{kaplan2020scaling}.
+and generative modelling.
 Nevertheless, scale imposes a fundamental tension between accuracy and deployability: large models incur
 prohibitive inference latency, memory footprint, and energy consumption that render them impractical in
 resource-constrained settings such as mobile devices, embedded systems, and real-time applications.
@@ -47,8 +47,7 @@ The $\tau^2$ scaling factor compensates for the reduced magnitude of gradients a
 \cite{hinton2015distilling}.
 
 Beyond model compression, knowledge distillation has evolved into a versatile training paradigm.
-It has been employed for domain adaptation \cite{Lopez-Paz2016unifying}, data-free compression
-\cite{lopes2017data}, continual learning \cite{li2017learning}, and, most relevantly to the present work,
+It has been employed for domain adaptation, data-free compression, continual learning, and, most relevantly to the present work,
 the acceleration of computationally intensive generative models such as diffusion models
 \cite{salimans2022progressive, song2023consistency, luo2023lcm}.
 The breadth of these applications motivates a systematic review of the classical distillation paradigms
@@ -90,20 +89,17 @@ As $\tau \to \infty$, the soft distribution approaches the uniform distribution,
 signal to noise; as $\tau \to 1$, it collapses toward the teacher's argmax prediction, recovering the hard
 label regime.
 Empirically, intermediate values $\tau \in [2, 10]$ have been found to yield the best student performance
-\cite{hinton2015distilling, tang2020understanding}.
+\cite{hinton2015distilling}.
 
 In regression settings and generative modelling—where there is no discrete class structure—response-based
 distillation takes the form of direct output matching.
 Given a teacher output $\hat{\mathbf{y}}^{\mathcal{T}} = f_{\mathcal{T}}(\mathbf{x})$ for an input
-$\mathbf{x}$, the student is trained under the mean squared error (MSE) objective,
+$\mathbf{x}$, the student is trained under the mean squared error (MSE) objective:
 
 \begin{equation}
     \mathcal{L}_{\mathrm{resp}} = \mathbb{E}_{\mathbf{x}}\!\left[\left\| f_{\mathcal{T}}(\mathbf{x}) - f_{\mathcal{S}}(\mathbf{x}) \right\|_2^2\right],
     \label{eq:response_mse}
 \end{equation}
-
-\noindent which constitutes the foundational loss used in methods such as Progressive Distillation for
-diffusion models \cite{salimans2022progressive} and will be revisited in Section~\ref{sec:kd_diffusion}.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection{Intermediate Representation Distillation}
@@ -140,7 +136,7 @@ Subsequent work has explored a variety of alignment strategies beyond raw MSE ma
 Attention Transfer \cite{zagoruyko2017paying} matches spatial attention maps derived from feature
 activations, defined as $\mathbf{A}_l = \text{vec}\!\left(\sum_c |\mathbf{h}^{\mathcal{T}}_{l,c}|^p\right)$
 for $p \geq 1$, capturing the \emph{where} of network attention rather than the full activation volume.
-Probabilistic Knowledge Transfer \cite{passalis2018learning} instead models the joint distribution of
+Probabilistic Knowledge Transfer instead models the joint distribution of
 feature activations and aligns it across teacher and student using kernel density estimation.
 More recently, relational knowledge distillation \cite{park2019relational} has proposed transferring
 structural relationships between instances—encoding pairwise or higher-order geometric configurations in
