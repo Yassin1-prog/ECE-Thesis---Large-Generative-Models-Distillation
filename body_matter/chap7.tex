@@ -11,7 +11,7 @@ This chapter presents the empirical evaluation of the distillation framework
 described in Chapter~\ref{chap:framework}. The objective of the
 experiments is to validate the central claim of the thesis: that,
 for the same student model architecture and inference cost, distillation
-training produces a strictly superior generative model compared to training
+training could produce a strictly superior generative model compared to training
 the student from scratch. The chapter is structured as follows.
 Section~\ref{sec:setup} specifies the datasets, model configurations, training
 protocol, computational resources, and evaluation methodology.
@@ -22,7 +22,7 @@ Section~\ref{sec:main_results} reports the results of the experiments. Section~\
 \label{sec:setup}
 % ============================================================
 
-\subsection{Datasets and Preprocessing}
+\subsection*{Datasets and Preprocessing}
 \label{subsec:datasets}
 
 The main dataset used is \textbf{Imagenette} which contains 10{,}000 training images evenly distributed across 10 classes. The images are resized to $256 \times 256$ pixels for all experiments. Images preprocessing consist of: a centre-crop that is applied using the implementation of
@@ -33,7 +33,7 @@ being passed to the model, and class labels are used as conditioning
 information throughout.
 
 % ============================================================
-\subsection{Model Configurations and Baselines}
+\subsection*{Model Configurations and Baselines}
 \label{subsec:models}
 
 All experiments are conducted using the Just-image Transformer (JiT)
@@ -67,7 +67,7 @@ training budget and optimization configuration, with no access to teacher
 supervision.
 
 % ============================================================
-\subsection{Training Protocol and Hyperparameters}
+\subsection*{Training Protocol and Hyperparameters}
 \label{subsec:training}
 
 All models are trained with the AdamW optimiser~\cite{loshchilov2017decoupled}
@@ -88,8 +88,9 @@ Table~\ref{tab:training_hparams}.
     \label{tab:training_hparams}
     \begin{tabular}{lc}
         \toprule
-        Hyperparameter & Imagenette (JiT-S/16) \\
+        Hyperparameter & Value \\
         \midrule
+        Epochs                         & 1000          \\
         Batch size (per GPU)           & 128 \\
         Effective batch size           & 128 \\
         Base LR ($\eta_\text{base}$)   & $5 \times 10^{-5}$ \\
@@ -111,16 +112,12 @@ Table~\ref{tab:training_hparams}.
 
 
 % ============================================================
-\subsection{Computational Resources}
+\subsection*{Computational Resources}
 \label{subsec:compute}
-
-The small-scale experiments on CIFAR-10 were conducted on the Kaggle
-computational platform, utilising two NVIDIA Tesla T4 GPUs (16\,GB VRAM each)
-in a distributed data-parallel configuration. The experiments were conducted on Google Colab Pro, utilising a single NVIDIA A100
-GPU (40\,GB VRAM).
+The experiments were conducted on Google Colab Pro, utilising a single NVIDIA A100 GPU (40\,GB VRAM).
 
 % ============================================================
-\subsection{Evaluation Protocol}
+\subsection*{Evaluation Protocol}
 \label{subsec:eval}
 
 Generative quality is assessed using two standard metrics: the
@@ -137,6 +134,65 @@ per setting. All evaluations use the first EMA track of the student model.
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Experimental Scope and Constraints}
+\label{sec:constraints}
+ 
+% ------------------------------------------------------------
+\subsection*{Teacher--Student Dataset Mismatch}
+\label{subsec:dataset_mismatch}
+% ------------------------------------------------------------
+ 
+The JiT-B/16 teacher was pre-trained on ImageNet-1K which contains $1{,}281{,}167$ training images spanning $1{,}000$
+classes. The JiT-S/16 student training is performed on Imagenette (due to computational constraints), a ten-class subset of ImageNet containing $10{,}000$ training images, or approximately $1{,}000$ samples per class. The two datasets therefore differ by two orders of magnitude in scale ($128\times$ fewer images) and two orders of magnitude in semantic breadth ($100\times$ fewer classes). The teacher's internal representations and soft targets encode rich multi-class visual semantics that are largely irrelevant to the narrow data manifold of Imagenette. Distillation methods are designed to transfer knowledge within a shared distribution; applying them across this domain gap may substantially attenuate the benefits that would be observed in a fully in-distribution setting.
+
+Additionally, due to the computational resources constraints, the student is exposed to approximately $77\times$ fewer gradient updates than the original JiT teacher. Which means the student model configurations are far from their convergence point explaining the relatively high FID and low IS reported.
+ 
+% ------------------------------------------------------------
+\subsection*{Unexplored Hyperparameter Space}
+\label{subsec:hparam_space}
+% ------------------------------------------------------------
+ 
+The distillation losses introduced in Chapter~\ref{chap:framework} each
+introduce few additional hyperparameters
+($\alpha_{\text{ViTKD}}$, $\beta_{\text{ViTKD}}$, $\lambda_{\text{ViTKD}}$,
+$\gamma_{\text{attn}}$, $t_{\min}$, etc.). In the present work these are held fixed
+at a single set of values (see Table~\ref{tab:training_hparams}) across all
+experiments, as the computational budget did not permit ablation studies or
+systematic hyperparameter search. The reported results should therefore be
+understood as the performance of a \emph{single, untuned configuration} of
+each method rather than an upper bound on what each strategy can achieve.
+ 
+% ------------------------------------------------------------
+\subsection*{Sensitivity of Evaluation Metrics to CFG Scale}
+\label{subsec:cfg_sensitivity}
+% ------------------------------------------------------------
+ 
+Both FID and IS are evaluated with classifier-free
+guidance~\cite{ho2022classifier} applied at a fixed scale per experiment. However \cite{li2025jit} has noted that the JiT model is very sensitive to the cfg scale hyperparamter. This means that the reported metrics do not represent the upper bound each configuration could achieve.
 
 
 
@@ -240,11 +296,11 @@ per setting. All evaluations use the first EMA track of the student model.
         tick align    = outside,
         xtick style   = {draw=none}, % hide the small tick marks on the x-axis
         every axis/.append style = {font=\small},
-        nodes near coords,           % print the numeric value on top of each bar
+        % nodes near coords,           % print the numeric value on top of each bar
         % -------------------------------------------------------
         % To DISABLE numeric labels on top of bars, comment out
         % the "nodes near coords" line above and uncomment below:
-        % nodes near coords = {},
+        nodes near coords = {},
         % -------------------------------------------------------
         nodes near coords align = {vertical},
         every node near coord/.append style = {font=\footnotesize},
@@ -262,13 +318,7 @@ per setting. All evaluations use the first EMA track of the student model.
 \label{sec:main_results}
 % ============================================================
 
-This section presents the quantitative results of the eight experimental
-configurations evaluated on Imagenette at $256 \times 256$ resolution.
-All results are obtained using the JiT-S/16 student architecture and are
-reported in terms of Fréchet Inception Distance (FID; lower is better)
-and Inception Score (IS; higher is better), computed over 50{,}000
-generated images as described in Section~\ref{subsec:eval}. Each
-subsection below follows the same structure: a brief description of the
+Each subsection below follows the same structure: a brief description of the
 experimental configuration, a figure containing side-by-side bar plots
 for FID and IS, and a concise numerical interpretation of the outcome.
 In all comparison figures, the left bar corresponds to the no-distillation
@@ -302,7 +352,7 @@ first EMA track of the student weights.
                 title        = {FID},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 99.99)};  % TODO: replace 99.99 with actual FID value
+                coordinates {(Baseline, 139.53)};
             \legend{Baseline}
             \end{axis}
         \end{tikzpicture}
@@ -318,7 +368,7 @@ first EMA track of the student weights.
                 title        = {Inception Score},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 9.99)};   % TODO: replace 9.99 with actual IS value
+                coordinates {(Baseline, 10.03)};
             \legend{Baseline}
             \end{axis}
         \end{tikzpicture}
@@ -331,7 +381,7 @@ first EMA track of the student weights.
 \end{figure}
 
 The baseline JiT-S/16, trained without any distillation, achieves an FID
-of \textbf{XX.XX} and an IS of \textbf{XX.XX}.   % TODO: fill in values
+of \textbf{139.53} and an IS of \textbf{10.03}.
 These figures represent the upper bound on FID and the lower bound on IS
 that the distillation experiments are expected to improve upon.
 
@@ -359,9 +409,9 @@ architectures. No projector loss is applied in this configuration.
                 title  = {FID},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+                coordinates {(Baseline, 139.53)};
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 99.99)};    % TODO: Exp 2 FID
+                coordinates {(Experiment, 151.32)};
             \legend{Baseline, Mimic only}
             \end{axis}
         \end{tikzpicture}
@@ -376,9 +426,9 @@ architectures. No projector loss is applied in this configuration.
                 title  = {Inception Score},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+                coordinates {(Baseline, 10.03)};
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 9.99)};     % TODO: Exp 2 IS
+                coordinates {(Experiment, 9.38)};
             \legend{Baseline, Mimic only}
             \end{axis}
         \end{tikzpicture}
@@ -390,10 +440,10 @@ architectures. No projector loss is applied in this configuration.
     \label{fig:exp2_results}
 \end{figure}
 
-Applying mimic distillation alone yields an FID of \textbf{XX.XX} and an
-IS of \textbf{XX.XX}, compared to the baseline FID of \textbf{XX.XX} and  % TODO: fill in values
-IS of \textbf{XX.XX}. This corresponds to a [improvement/regression] of
-approximately \textbf{XX.XX} FID points and \textbf{XX.XX} IS points
+Applying mimic distillation alone yields an FID of \textbf{151.32} and an
+IS of \textbf{9.38}, compared to the baseline FID of \textbf{139.53} and
+IS of \textbf{10.03}. This corresponds to a regression of
+approximately \textbf{11.21} FID points and \textbf{0.65} IS points
 relative to the baseline.
 
 % ============================================================
@@ -419,9 +469,9 @@ and teacher representations.
                 title  = {FID},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+                coordinates {(Baseline, 139.53)};      % baseline FID
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 99.99)};    % TODO: Exp 3 FID
+                coordinates {(Experiment, 164.57)};    % Exp 3 FID
             \legend{Baseline, Full ViTKD}
             \end{axis}
         \end{tikzpicture}
@@ -436,9 +486,9 @@ and teacher representations.
                 title  = {Inception Score},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+                coordinates {(Baseline, 10.03)};       % baseline IS
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 9.99)};     % TODO: Exp 3 IS
+                coordinates {(Experiment, 7.88)};      % Exp 3 IS
             \legend{Baseline, Full ViTKD}
             \end{axis}
         \end{tikzpicture}
@@ -450,14 +500,16 @@ and teacher representations.
     \label{fig:exp3_results}
 \end{figure}
 
-The full ViTKD configuration yields an FID of \textbf{XX.XX} and an IS of
-\textbf{XX.XX}. Relative to Experiment~2 (mimic only; FID \textbf{XX.XX},  % TODO: fill in values
-IS \textbf{XX.XX}), the addition of the projector loss results in a
-[improvement/regression], suggesting that the projector component
-[adds complementary signal / introduces conflicting gradients] in this
+The full ViTKD configuration yields an FID of \textbf{164.57} and an IS of
+\textbf{7.88}. Relative to Experiment~2 (mimic only; FID \textbf{151.32},
+IS \textbf{9.38}), the addition of the projector loss results in a
+regression, suggesting that the projector component
+introduces conflicting gradients in this
 setting. This observation motivates the adoption of the mimic-only
 configuration as the feature distillation component in subsequent
 combined experiments.
+
+\FloatBarrier
 
 % ============================================================
 \subsection{Experiment 4: JiT-S/16 with ViTKD Mimic and SNR-Weighted Loss}
@@ -466,9 +518,7 @@ combined experiments.
 
 Experiment~4 augments the mimic-only distillation of Experiment~2 with
 an SNR-based loss weighting scheme. Specifically, a min-SNR-$\gamma$
-reweighting~\cite{hang2023efficient} is applied to both the flow-matching
-and distillation objectives with $\gamma = 0.5$, clamping the effective
-loss weight at each timestep $t$ to prevent high-noise timesteps from
+reweighting~\cite{hang2023efficient} is applied to the distillation objective with $\gamma = 0.55$, to prevent high-noise timesteps from
 dominating the gradient signal. The mimic loss is retained in preference
 to the full ViTKD objective on the basis that Experiment~2 demonstrated
 superior performance to Experiment~3.
@@ -485,9 +535,9 @@ superior performance to Experiment~3.
                 title  = {FID},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+                coordinates {(Baseline, 139.53)};      % baseline FID
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 99.99)};    % TODO: Exp 4 FID
+                coordinates {(Experiment, 144.3)};     % Exp 4 FID
             \legend{Baseline, Mimic + SNR-$\gamma$}
             \end{axis}
         \end{tikzpicture}
@@ -502,26 +552,26 @@ superior performance to Experiment~3.
                 title  = {Inception Score},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+                coordinates {(Baseline, 10.03)};       % baseline IS
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 9.99)};     % TODO: Exp 4 IS
+                coordinates {(Experiment, 9.52)};      % Exp 4 IS
             \legend{Baseline, Mimic + SNR-$\gamma$}
             \end{axis}
         \end{tikzpicture}
     \end{subfigure}
     %
     \caption{Experiment~4 — JiT-S/16 trained with the ViTKD mimic loss
-    and min-SNR-$\gamma$ reweighting ($\gamma = 0.5$), compared against
+    and min-SNR-$\gamma$ reweighting ($\gamma = 0.55$), compared against
     the no-distillation baseline. FID (left; lower is better) and IS
     (right; higher is better).}
     \label{fig:exp4_results}
 \end{figure}
 
-With SNR reweighting enabled, the model achieves an FID of \textbf{XX.XX}
-and an IS of \textbf{XX.XX}. Relative to the mimic-only baseline of      % TODO: fill in values
-Experiment~2 (FID \textbf{XX.XX}, IS \textbf{XX.XX}), this represents a
-[improvement/regression], indicating that timestep-aware loss weighting
-[does / does not] provide a meaningful complementary benefit to feature
+With SNR reweighting enabled, the model achieves an FID of \textbf{144.3}
+and an IS of \textbf{9.52}. Relative to the mimic-only baseline of
+Experiment~2 (FID \textbf{151.32}, IS \textbf{9.38}), this represents an
+improvement, indicating that timestep-aware loss weighting
+does provide a meaningful complementary benefit to feature
 map distillation in this setting.
 
 % ============================================================
@@ -532,7 +582,7 @@ map distillation in this setting.
 Experiment~5 investigates a qualitatively different distillation signal:
 rather than aligning intermediate feature maps, the attention distillation
 loss encourages the student to reproduce the teacher's post-softmax
-self-attention weight matrices in the final $K = 2$ transformer blocks.
+self-attention weight matrices in the final $K = 4$ transformer blocks.
 No ViTKD loss of any kind is applied in this configuration, isolating the
 contribution of structural attention transfer.
 
@@ -548,9 +598,9 @@ contribution of structural attention transfer.
                 title  = {FID},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+                coordinates {(Baseline, 139.53)};      % baseline FID
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 99.99)};    % TODO: Exp 5 FID
+                coordinates {(Experiment, 148.76)};    % Exp 5 FID
             \legend{Baseline, Attention KD}
             \end{axis}
         \end{tikzpicture}
@@ -565,9 +615,9 @@ contribution of structural attention transfer.
                 title  = {Inception Score},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+                coordinates {(Baseline, 10.03)};       % baseline IS
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 9.99)};     % TODO: Exp 5 IS
+                coordinates {(Experiment, 9.7)};       % Exp 5 IS
             \legend{Baseline, Attention KD}
             \end{axis}
         \end{tikzpicture}
@@ -579,12 +629,11 @@ contribution of structural attention transfer.
     \label{fig:exp5_results}
 \end{figure}
 
-Attention map distillation alone yields an FID of \textbf{XX.XX} and an
-IS of \textbf{XX.XX}. The [improvement/regression] relative to the         % TODO: fill in values
-baseline (FID \textbf{XX.XX}, IS \textbf{XX.XX}) suggests that aligning
+Attention map distillation alone yields an FID of \textbf{148.76} and an
+IS of \textbf{9.7}. The regression relative to the
+baseline (FID \textbf{139.53}, IS \textbf{10.03}) suggests that aligning
 the spatial routing structure of the student's attention heads to that of
-the teacher [provides a useful structural prior / is insufficient as a
-standalone distillation signal] at this capacity ratio.
+the teacher is insufficient as a standalone distillation signal at this capacity ratio.
 
 % ============================================================
 \subsection{Experiment 6: JiT-S/16 with Attention Distillation and Timestep Gating}
@@ -593,12 +642,7 @@ standalone distillation signal] at this capacity ratio.
 
 Experiment~6 extends the attention distillation of Experiment~5 with a
 hard timestep gate: the attention distillation loss is applied only for
-denoising timesteps $t \geq t_{\min}$, where $t_{\min}$ is set as
-specified in Table~\ref{tab:training_hparams}. The motivation for this
-gating scheme is that attention patterns at very low noise levels
-($t \approx 0$) primarily encode fine-grained textural detail rather
-than the structural and semantic content that the student is most likely
-to benefit from inheriting from the teacher.
+denoising timesteps $t \geq t_{\min} = 0.2$
 
 \begin{figure}[ht]
     \centering
@@ -612,9 +656,9 @@ to benefit from inheriting from the teacher.
                 title  = {FID},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+                coordinates {(Baseline, 139.53)};      % baseline FID
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 99.99)};    % TODO: Exp 6 FID
+                coordinates {(Experiment, 146.55)};    % Exp 6 FID
             \legend{Baseline, Attn KD + Gate}
             \end{axis}
         \end{tikzpicture}
@@ -629,9 +673,9 @@ to benefit from inheriting from the teacher.
                 title  = {Inception Score},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+                coordinates {(Baseline, 10.03)};       % baseline IS
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 9.99)};     % TODO: Exp 6 IS
+                coordinates {(Experiment, 9.78)};      % Exp 6 IS
             \legend{Baseline, Attn KD + Gate}
             \end{axis}
         \end{tikzpicture}
@@ -644,92 +688,28 @@ to benefit from inheriting from the teacher.
     \label{fig:exp6_results}
 \end{figure}
 
+\FloatBarrier
+
 Gating the attention loss to high-noise timesteps yields an FID of
-\textbf{XX.XX} and an IS of \textbf{XX.XX}. Relative to the ungated        % TODO: fill in values
-attention baseline of Experiment~5 (FID \textbf{XX.XX}, IS \textbf{XX.XX}),
-this [improves / does not improve] performance, [supporting / challenging]
+\textbf{146.55} and an IS of \textbf{9.78}. Relative to the ungated
+attention baseline of Experiment~5 (FID \textbf{148.76}, IS \textbf{9.7}),
+this improves performance, supporting
 the hypothesis that attention distillation is most informative during the
 high-noise, structure-forming phase of the denoising trajectory.
 
+
 % ============================================================
-\subsection{Experiment 7: JiT-S/16 with Combined Attention, Mimic, Timestep Gating, and SNR Weighting}
+\subsection{Experiment 7: Best Configuration with Weight Initialisation}
 \label{subsec:exp7}
 % ============================================================
 
-Experiment~7 combines the most promising individual components identified
-in the preceding experiments. Specifically, it jointly applies the mimic
-distillation loss (Experiment~2), min-SNR-$\gamma$ reweighting
-(Experiment~4), attention map distillation with timestep gating
-(Experiment~6), and the SNR-weighted objective, constituting the most
-complete distillation configuration evaluated in this work prior to weight
-initialisation.
-
-\begin{figure}[ht]
-    \centering
-    %
-    \begin{subfigure}[b]{0.44\linewidth}
-        \centering
-        \begin{tikzpicture}
-            \begin{axis}[
-                resultbar,
-                ylabel = {FID $(\downarrow)$},
-                title  = {FID},
-            ]
-            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
-            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 99.99)};    % TODO: Exp 7 FID
-            \legend{Baseline, Combined}
-            \end{axis}
-        \end{tikzpicture}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.44\linewidth}
-        \centering
-        \begin{tikzpicture}
-            \begin{axis}[
-                resultbar,
-                ylabel = {IS $(\uparrow)$},
-                title  = {Inception Score},
-            ]
-            \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
-            \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 9.99)};     % TODO: Exp 7 IS
-            \legend{Baseline, Combined}
-            \end{axis}
-        \end{tikzpicture}
-    \end{subfigure}
-    %
-    \caption{Experiment~7 — JiT-S/16 trained with the combined distillation
-    objective: ViTKD mimic loss, attention map distillation with timestep
-    gating, and min-SNR-$\gamma$ loss reweighting ($\gamma = 0.5$),
-    compared against the no-distillation baseline. FID (left; lower is
-    better) and IS (right; higher is better).}
-    \label{fig:exp7_results}
-\end{figure}
-
-The combined configuration yields an FID of \textbf{XX.XX} and an IS of
-\textbf{XX.XX}. Relative to the baseline (FID \textbf{XX.XX}, IS            % TODO: fill in values
-\textbf{XX.XX}), this represents the [best / second-best] result among
-all distillation-only configurations, [confirming / suggesting] that the
-individual distillation signals are [complementary / partially redundant]
-when applied jointly.
-
-% ============================================================
-\subsection{Experiment 8: Best Configuration with Weight Initialisation}
-\label{subsec:exp8}
-% ============================================================
-
 The final experiment augments the strongest-performing distillation
-configuration identified among Experiments~2--7 with structured weight
-initialisation~(Section~\ref{sec:weight_selection}).   % TODO: update cross-reference once best experiment is known
+configuration identified among Experiments~1--6 (happens to be Experiment 1 -- the baseline itself) with structured weight
+initialization~(Section~\ref{sec:weight_selection}).
 Prior to any gradient updates, the student model's parameters are seeded
-using a structured subset of the pretrained teacher weights, selected
-according to the layer-matching strategy described in
-Chapter~\ref{chap:framework}. All distillation losses and training
+using a structured subset of the pretrained teacher weights. All distillation losses and training
 hyperparameters are otherwise identical to those of the best preceding
-experiment.
+experiment (Experiment 1).
 
 \begin{figure}[ht]
     \centering
@@ -743,9 +723,9 @@ experiment.
                 title  = {FID},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 99.99)};      % TODO: baseline FID
+                coordinates {(Baseline, 139.53)};      % baseline FID
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 99.99)};    % TODO: Exp 8 FID
+                coordinates {(Experiment, 129.47)};    % Exp 7 FID
             \legend{Baseline, Best + Init}
             \end{axis}
         \end{tikzpicture}
@@ -760,29 +740,28 @@ experiment.
                 title  = {Inception Score},
             ]
             \addplot[fill=colorBaseline, draw=colorBaseline!70!black]
-                coordinates {(Baseline, 9.99)};       % TODO: baseline IS
+                coordinates {(Baseline, 10.03)};       % baseline IS
             \addplot[fill=colorExperiment, draw=colorExperiment!70!black]
-                coordinates {(Experiment, 9.99)};     % TODO: Exp 8 IS
+                coordinates {(Experiment, 11.74)};     % Exp 7 IS
             \legend{Baseline, Best + Init}
             \end{axis}
         \end{tikzpicture}
     \end{subfigure}
     %
-    \caption{Experiment~8 — Best distillation configuration augmented with
+    \caption{Experiment~7 — Best distillation configuration augmented with
     structured weight initialisation from the pretrained teacher, compared
     against the no-distillation baseline. FID (left; lower is better) and
     IS (right; higher is better).}
-    \label{fig:exp8_results}
+    \label{fig:exp7_results}
 \end{figure}
 
 Augmenting the best distillation configuration with teacher-derived weight
-initialisation yields an FID of \textbf{XX.XX} and an IS of \textbf{XX.XX},  % TODO: fill in values
+initialisation yields an FID of \textbf{129.47} and an IS of \textbf{11.74},
 representing the strongest result in the experimental campaign. Relative
-to the baseline (FID \textbf{XX.XX}, IS \textbf{XX.XX}), this corresponds
-to a reduction of \textbf{XX.XX} FID points and an increase of
-\textbf{XX.XX} IS points, [supporting / suggesting] that a favourable
-parameter initialisation provides a complementary benefit to online
-distillation supervision during training.
+to the baseline (FID \textbf{139.53}, IS \textbf{10.03}), this corresponds
+to a reduction of \textbf{10.06} FID points and an increase of
+\textbf{1.71} IS points, suggesting that a favourable
+parameter initialization provides a significant performance boost.
 
 % ============================================================
 \subsection{Summary of All Results}
@@ -790,10 +769,10 @@ distillation supervision during training.
 % ============================================================
 
 Table~\ref{tab:all_results} consolidates the FID and IS scores across all
-eight experimental configurations. Figure~\ref{fig:scatter_all} provides
+seven experimental configurations. Figure~\ref{fig:scatter_all} provides
 a complementary view in the form of a scatter plot in IS--FID space, where
 each point corresponds to one experiment; configurations closer to the
-upper-left corner (high IS, low FID) represent superior generative quality.
+bottom-right corner (high IS, low FID) represent superior generative quality.
 
 % ------ Full Results Table ------
 \begin{table}[ht]
@@ -807,14 +786,13 @@ upper-left corner (high IS, low FID) represent superior generative quality.
         \toprule
         \textbf{Exp.} & \textbf{Configuration} & \textbf{FID} $(\downarrow)$ & \textbf{IS} $(\uparrow)$ \\
         \midrule
-        1 & Baseline (no distillation)                         & XX.XX & XX.XX \\ % TODO
-        2 & ViTKD mimic only                                   & XX.XX & XX.XX \\ % TODO
-        3 & Full ViTKD (mimic + projector)                     & XX.XX & XX.XX \\ % TODO
-        4 & ViTKD mimic + SNR-$\gamma$ ($\gamma{=}0.5$)       & XX.XX & XX.XX \\ % TODO
-        5 & Attention distillation                             & XX.XX & XX.XX \\ % TODO
-        6 & Attention distillation + timestep gate             & XX.XX & XX.XX \\ % TODO
-        7 & Attention + mimic + gate + SNR-$\gamma$            & XX.XX & XX.XX \\ % TODO
-        8 & Best configuration + weight initialisation         & XX.XX & XX.XX \\ % TODO
+        1 & Baseline (no distillation)                         & 139.53 & 10.03 \\ 
+        2 & ViTKD mimic only                                   & 151.32 & 9.38\\ 
+        3 & Full ViTKD (mimic + projector)                     & 164.57 & 7.88 \\ 
+        4 & ViTKD mimic + SNR-$\gamma$ ($\gamma{=}0.5$)       & 144.3  & 9.52 \\ 
+        5 & Attention distillation                             & 148.76 & 9.7  \\ 
+        6 & Attention distillation + timestep gate             & 146.55 & 9.78 \\ 
+        7 & Best configuration + weight initialisation           & 129.47 & 11.74 \\ 
         \bottomrule
     \end{tabular}
 \end{table}
@@ -868,36 +846,32 @@ upper-left corner (high IS, low FID) represent superior generative quality.
         % -----------------------------------------------------------------
 
         \addplot[only marks, mark=*, mark options={fill=colorBaseline, draw=colorBaseline!70!black}]
-            coordinates {(9.99, 99.99)};        % TODO: (IS_exp1, FID_exp1)
+            coordinates {(10.03, 139.53)};        % TODO: (IS_exp1, FID_exp1)
         \addlegendentry{Exp.\ 1: Baseline}
 
         \addplot[only marks, mark=*, mark options={fill=colorExperiment, draw=colorExperiment!70!black}]
-            coordinates {(9.99, 99.99)};        % TODO: (IS_exp2, FID_exp2)
+            coordinates {(9.38, 151.32)};        % TODO: (IS_exp2, FID_exp2)
         \addlegendentry{Exp.\ 2: ViTKD mimic}
 
         \addplot[only marks, mark=square*, mark options={fill=colorExperiment!60, draw=colorExperiment!90!black}]
-            coordinates {(9.99, 99.99)};        % TODO: (IS_exp3, FID_exp3)
+            coordinates {(7.88, 164.57)};       % (IS_exp3, FID_exp3)
         \addlegendentry{Exp.\ 3: Full ViTKD}
 
         \addplot[only marks, mark=triangle*, mark options={fill=colorExperiment!80, draw=colorExperiment!90!black}]
-            coordinates {(9.99, 99.99)};        % TODO: (IS_exp4, FID_exp4)
+            coordinates {(9.52, 144.3)};        % (IS_exp4, FID_exp4)
         \addlegendentry{Exp.\ 4: Mimic + SNR-$\gamma$}
 
         \addplot[only marks, mark=diamond*, mark options={fill=colorExperiment!50, draw=colorExperiment!90!black}]
-            coordinates {(9.99, 99.99)};        % TODO: (IS_exp5, FID_exp5)
+            coordinates {(9.7, 148.76)};        % (IS_exp5, FID_exp5)
         \addlegendentry{Exp.\ 5: Attn KD}
 
         \addplot[only marks, mark=pentagon*, mark options={fill=colorExperiment!70, draw=colorExperiment!90!black}]
-            coordinates {(9.99, 99.99)};        % TODO: (IS_exp6, FID_exp6)
+            coordinates {(9.78, 146.55)};       % (IS_exp6, FID_exp6)
         \addlegendentry{Exp.\ 6: Attn KD + gate}
 
-        \addplot[only marks, mark=Mercedes star*, mark options={fill=colorExperiment!90, draw=colorExperiment!90!black}]
-            coordinates {(9.99, 99.99)};        % TODO: (IS_exp7, FID_exp7)
-        \addlegendentry{Exp.\ 7: Combined}
-
-        \addplot[only marks, mark=10-pointed star*, mark options={fill=red!70!black, draw=red!90!black}]
-            coordinates {(9.99, 99.99)};        % TODO: (IS_exp8, FID_exp8)
-        \addlegendentry{Exp.\ 8: Best + init}
+        \addplot[only marks, mark=diamond*, mark options={fill=red,             draw=red!70!black}]
+            coordinates {(10.64, 129.47)};      % (IS_exp7, FID_exp7)
+        \addlegendentry{Exp.\ 7: Best + init}
 
         % -----------------------------------------------------------------
         % EXPERIMENT NUMBER LABELS NEXT TO EACH POINT
@@ -905,33 +879,27 @@ upper-left corner (high IS, low FID) represent superior generative quality.
         % To disable all labels, delete or comment out this entire block.
         % To adjust label offset, modify the "xshift" and "yshift" values.
         % -----------------------------------------------------------------
-        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {1};  % TODO
-        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {2};  % TODO
-        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {3};  % TODO
-        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {4};  % TODO
-        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {5};  % TODO
-        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {6};  % TODO
-        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {7};  % TODO
-        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.99,99.99) {8};  % TODO
-
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:10.03,139.53) {1};
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.38,151.32) {2};
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:7.88,164.57) {3};
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.52,144.3) {4};
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.7,148.76) {5};
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:9.78,146.55) {6};
+        \node[font=\scriptsize, xshift=6pt, yshift=3pt]  at (axis cs:10.64,129.47) {7};
         \end{axis}
     \end{tikzpicture}
-    \caption{IS--FID scatter plot for all eight experimental configurations.
+    \caption{IS--FID scatter plot for all seven experimental configurations.
     Each point corresponds to one experiment; the upper-left region (high IS,
     low FID) indicates superior generative quality. The gray marker denotes
-    the no-distillation baseline (Experiment~1); the red star marks the best
-    overall result (Experiment~8).}
+    the no-distillation baseline (Experiment~1); the red diamond marks the best
+    overall result (Experiment~7).}
     \label{fig:scatter_all}
 \end{figure}
 
 The results in Table~\ref{tab:all_results} and Figure~\ref{fig:scatter_all}
-collectively demonstrate that knowledge distillation consistently
-[improves / modulates] the generative quality of the JiT-S/16 student
+collectively demonstrate the effect knowledge distillation has on the generative quality of the JiT-S/16 student
 relative to training from scratch. The most substantial gains are observed
-in Experiment~8, which achieves an FID of \textbf{XX.XX} and an IS of   % TODO: fill in values
-\textbf{XX.XX} — a reduction of \textbf{XX.XX} FID points and an increase
-of \textbf{XX.XX} IS points over the baseline. A detailed discussion of
-these findings is provided in Section~\ref{sec:disc_limits}.
+in Experiment~7. A detailed discussion and interpretation of these findings is provided in Section~\ref{sec:disc_limits}.
 
 
 
@@ -1095,9 +1063,6 @@ these findings is provided in Section~\ref{sec:disc_limits}.
 \subsection{Interpreting the results}
 \label{subsec:interp-results}
 
-The experimental results collectively support the view that knowledge distillation provides a form of structured regularisation during student training, guiding the student’s
-internal representations toward solutions that generalise more effectively to the target
-data distribution.
 
 \subsection{Limitations}
 \label{subsec:limits}

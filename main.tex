@@ -48,6 +48,64 @@
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usepackage{subcaption}
+\usepackage{booktabs}     % for \toprule, \midrule, \bottomrule in tables
+\usepackage{xcolor}       % for custom color definitions
+
+\usepackage{placeins}  % FOR SETTING A BARRIER SO FIGURES DO NOT GO TO THE WRONG SECTIONS - USAGE: \FloatBarrier before the next section
+
+% For tiks plots
+
+% =====================================================================
+%  Preamble additions for the distillation framework diagrams
+%  (Chapter 6).  Add this block ONCE to the thesis preamble, after the
+%  existing \usepackage{xcolor}/pgfplots lines.
+% =====================================================================
+\usepackage{tikz}
+\usetikzlibrary{positioning,fit,backgrounds,arrows.meta,calc,shapes.geometric}
+
+% --- Colours --------------------------------------------------------
+% colorExperiment / colorBaseline are also defined in chap7.tex for the
+% result plots; repeating them here is harmless and guarantees the Ch.6
+% figures compile regardless of \include order.
+\definecolor{colorExperiment}{RGB}{0,84,159}   % NTUA deep blue -> student / trainable
+\definecolor{colorBaseline}{RGB}{150,150,150}  % neutral gray   -> teacher / frozen
+\definecolor{distill}{RGB}{178,34,34}          % firebrick      -> distillation signal
+\definecolor{initclr}{RGB}{0,128,96}           % teal-green     -> offline weight init
+
+% --- Shared TikZ styles for both diagrams ---------------------------
+\tikzset{
+  blk/.style={rounded corners=2pt,draw,align=center,font=\footnotesize,inner sep=4pt,minimum height=8mm},
+  sblk/.style={blk,fill=colorExperiment!8,draw=colorExperiment!60},
+  tblk/.style={blk,fill=black!5,draw=colorBaseline!90,text=black!55},
+  stage/.style={blk,fill=black!3,draw=black!45},
+  shallow/.style={line width=0.9pt},
+  loss/.style={rounded corners=2pt,draw=distill!70,fill=distill!8,align=center,font=\footnotesize,inner sep=4pt,minimum height=8mm},
+  tot/.style={rounded corners=2pt,draw=distill,fill=distill!12,align=center,font=\footnotesize\bfseries,inner sep=4pt,minimum height=9mm},
+  ema/.style={rounded corners=2pt,draw=colorExperiment!60,fill=colorExperiment!6,align=center,font=\scriptsize,inner sep=3pt},
+  io/.style={rounded corners=2pt,draw=black!50,fill=black!3,align=center,font=\footnotesize,inner sep=3pt},
+  darr/.style={-{Latex[length=2mm]},dashed,distill,line width=0.8pt},
+  farr/.style={-{Latex[length=2mm]},black!60,line width=0.7pt},
+  sarr/.style={-{Latex[length=2mm]},colorExperiment!75,line width=0.8pt},
+  tarr/.style={-{Latex[length=2mm]},black!55,line width=0.8pt},
+  larr/.style={-{Latex[length=2mm]},distill!75,line width=0.8pt},
+  vel/.style={-{Latex[length=2mm]},black!50,line width=0.6pt},
+  iarr/.style={-{Latex[length=2.2mm]},initclr,line width=1.1pt},
+  bp/.style={-{Latex[length=2.2mm]},dashed,colorExperiment,line width=0.9pt},
+}
+
+% --- Padlock glyphs (frozen vs. trainable) --------------------------
+\newcommand{\lockclosed}[2]{\begin{scope}[shift={#1}]
+  \fill[#2](-1.6mm,-1.4mm)rectangle(1.6mm,1.2mm);
+  \draw[#2,line width=0.5pt](-1.0mm,1.2mm)arc(180:0:1.0mm)--(1.0mm,1.2mm);
+  \fill[white](0,-0.1mm)circle(0.35mm);\end{scope}}
+\newcommand{\lockopen}[2]{\begin{scope}[shift={#1}]
+  \fill[#2](-1.6mm,-1.4mm)rectangle(1.6mm,1.2mm);
+  \draw[#2,line width=0.5pt]
+    (0.9mm,1.2mm) -- (0.9mm,2.3mm)
+    arc(0:180:0.9mm);
+  \fill[white](0,-0.1mm)circle(0.35mm);\end{scope}}
+\end{scope}}
+
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
